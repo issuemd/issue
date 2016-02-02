@@ -1,0 +1,6 @@
+Set default so that files will have LF line endings on checkout
+* text eol=lf
+
+# Denote all files that are truly binary and should not be modified
+# *.png binary
+# *.jpg binary
