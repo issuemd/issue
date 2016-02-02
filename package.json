@@ -1,6 +1,6 @@
 {
   "name": "issue",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Command line tool for displaying issues using the issuemd library",
   "keywords": [
     "issue",
