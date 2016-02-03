@@ -232,6 +232,7 @@
 
                     break;
 
+                case 'list':
                 case 'show':
 
                     filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
@@ -258,7 +259,7 @@
                             })
                             .fail(responseError);
 
-                    } else if (!!repo && config.params.length === 1) {
+                    } else if (!!repo && config.params.length === 1 && command === 'show') {
 
                         // $ issue --repo moment/moment github search 2805
                         args = [repo.namespace, repo.id, config.params[0], filters];
@@ -278,9 +279,9 @@
                         console.log([
                             'Usage:',
                             '',
-                            '  issue github show --repo <namespace/project>',
+                            '  issue github list mine',
+                            '  issue github list --repo <namespace/project>',
                             '  issue github show --repo <namespace/project> <id>',
-                            '  issue github show mine',
                             '',
                             'Example:',
                             '',

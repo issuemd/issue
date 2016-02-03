@@ -12,18 +12,18 @@ Command line tool for displaying issues using the [issuemd library](https://gith
 
 ## Usage (GitHub plugin)
 
-### Show list of issues from local GitHub repo
+### List issues from local GitHub repo
 
-`cd` into local GitHub repo and run `show` command...
+`cd` into local GitHub repo and run the `list` command...
 
     $ cd bootstrap
-    $ issue github show
+    $ issue github list
 
-### Show list of issues from online GitHub repo
+### List issues from online GitHub repo
 
 Specify the target project with the `--repo` flag
 
-    $ issue github show --repo twbs/bootstrap
+    $ issue github list --repo twbs/bootstrap
 
 ### Show individual issue
 
@@ -37,9 +37,9 @@ To show individual issue, add the issue number as the last argument...
 
 ### Show filtered list of issues
 
-The `show` command supports standard GitHub filters: `'filter', 'state', 'labels', 'sort', 'direction', 'since'`
+The `list` command supports standard GitHub filters: `'filter', 'state', 'labels', 'sort', 'direction', 'since'`
 
-    $ issue github show --state open
+    $ issue github list --state open
     
 ### Search repositories
 
@@ -84,7 +84,7 @@ GitHub logout command clears out credentials from your `.issuerc` configuration 
 
 Once you are logged in, you can list all your assigned issues in all projects.
 
-    $ issue github show mine
+    $ issue github list mine
 
 ## Configuration
 
