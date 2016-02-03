@@ -170,6 +170,7 @@
                 }
             });
             myConfig = _.defaults(myConfig, {
+                // subtract one form column width on windows to avoid insertion of empty lines
                 width: process.stdout.columns - (process.platform === 'win32' ? 1 : 0)
             });
             return myConfig;

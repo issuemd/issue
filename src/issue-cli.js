@@ -44,8 +44,13 @@
         });
 
         if (config.banner === 'always' || _.isUndefined(config.params[0]) || config.params[0] === 'init') {
+            var logo;
             if (config.banner !== false) {
-                var logo = fs.readFileSync(src + '/issue-cli-ascii-logo.txt').toString('UTF-8');
+                if (config.width >= 80) {
+                    logo = fs.readFileSync(src + '/issue-cli-ascii-logo.txt').toString('UTF-8');
+                } else {
+                    logo = helper.chalk.red.bold('\n    #') + helper.chalk.white.bold('issue') + helper.chalk.grey(' cli - commanding your issues\n');
+                }
                 console.log(config.technicolor ? logo : helper.chalk.stripColor(logo));
             }
         }
@@ -115,14 +120,14 @@
                         break;
                 }
             } else {
-                // if there is no sub-command, open repl
+                // if there is no sub-command, show help
                 // else if there is a plugin, pass the subCommand to the plugin to handle
                 // else if the plugin is disabled, show disabled plugin message
                 // else if the plugin is unconfigured, show unconfigured plugin message
                 // else show unknown command message
                 if (!cliParams.length) {
-                    console.log('issue repl, `.help` to list commands\n');
-                    require('../src/issue-repl.js')(config);
+                    var helptext = fs.readFileSync(src + (config.help ? '/issue-cli-help.txt' : '/issue-cli-usage.txt')).toString('UTF-8');
+                    console.log(helptext);
                 } else if (!!plugins[command]) {
                     cliParams.shift();
                     var subCommand = cliParams.shift();
