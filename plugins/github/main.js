@@ -163,7 +163,7 @@
 
         return function (config, command) {
 
-            var filters, apicall, args;
+            var filters, args;
 
             var deferred = Q.defer();
 
@@ -232,68 +232,63 @@
 
                     break;
 
+                case 'list':
                 case 'show':
 
                     filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
 
-                    switch (config.params.length) {
+                    if (!!repo && config.params.length === 0) {
 
-                        case 3:
-                        case 1:
-
-                            // parameters
-                            //     $ issue github search moment moment 2805
-                            // ... else as options
-                            //     $ issue --repo moment/moment github search 2805
-                            if (config.params.length === 3) {
-                                args = [config.params[0], config.params[1], config.params[2], filters];
-                            } else if (!!repo) {
-                                args = [repo.namespace, repo.id, config.params[0], filters];
-                            }
-
-                            fetchIssue.apply(this, args)
-                                .then(function (response) {
-                                    var issues = fetchIssueSuccess(response);
-                                    // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
-                                    var templateOptions = _.pick(localConfig, 'dim');
-                                    console.log(issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)));
-                                })
-                                .then(function () {
+                        listIssues(repo.namespace, repo.id, filters)
+                            .then(function (response) {
+                                listSuccess(response);
+                                fetchNextPage(response.headers, listSuccess, responseError, function () {
                                     deferred.resolve();
-                                })
-                                .fail(responseError);
-                            break;
+                                }, config.answer || 'ask');
+                            })
+                            .fail(responseError);
 
-                        case 0:
-                        case 2:
+                    } else if (config.params.length === 1 && config.params[0] === 'mine') {
 
-                            // non personal issues as parameters
-                            //     $ issue github search moment moment
-                            // ... else as options
-                            //     $ issue --repo moment/moment github search
-                            // ... else personal issues
-                            if (config.params.length >= 2) {
-                                apicall = listIssues(config.params[0], config.params[1], filters);
-                            } else if (!!repo) {
-                                apicall = listIssues(repo.namespace, repo.id, filters);
-                            } else {
-                                apicall = listPersonalIssues(filters);
-                            }
+                        listPersonalIssues(filters)
+                            .then(function (response) {
+                                listSuccess(response);
+                                fetchNextPage(response.headers, listSuccess, responseError, function () {
+                                    deferred.resolve();
+                                }, config.answer || 'ask');
+                            })
+                            .fail(responseError);
 
-                            apicall
-                                .then(function (response) {
-                                    listSuccess(response);
-                                    fetchNextPage(response.headers, listSuccess, responseError, function () {
-                                        deferred.resolve();
-                                    }, config.answer || 'ask');
-                                })
-                                .fail(responseError);
+                    } else if (!!repo && config.params.length === 1 && command === 'show') {
 
-                            break;
+                        // $ issue --repo moment/moment github search 2805
+                        args = [repo.namespace, repo.id, config.params[0], filters];
 
+                        fetchIssue.apply(this, args)
+                            .then(function (response) {
+                                var issues = fetchIssueSuccess(response);
+                                // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
+                                var templateOptions = _.pick(localConfig, 'dim');
+                                console.log(issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)));
+                            })
+                            .then(function () {
+                                deferred.resolve();
+                            })
+                            .fail(responseError);
+                    } else {
+                        console.log([
+                            'Usage:',
+                            '',
+                            '  issue github list mine',
+                            '  issue github list --repo <namespace/project>',
+                            '  issue github show --repo <namespace/project> <id>',
+                            '',
+                            'Example:',
+                            '',
+                            '  issue github show --repo victorquinn/chancejs 207',
+                            ''
+                        ].join('\n'));
                     }
-
-                    break;
 
             }
 
