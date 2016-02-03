@@ -80,6 +80,12 @@ GitHub logout command clears out credentials from your `.issuerc` configuration 
 
     $ issue github logout
 
+### Personal issues
+
+Once you are logged in, you can list all your assigned issues in all projects.
+
+    $ issue github show mine
+
 ## Configuration
 
 Change directory to where you want to store your configuration, and run init command...
