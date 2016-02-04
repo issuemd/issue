@@ -31,7 +31,7 @@
             var parentRE = /#{\s*?_\s*?}/,
                 slice = Array.prototype.slice;
 
-            _.each(slice.call(arguments, 1), function (source) {
+            _.each(slice.call(arguments, 1), function (source) { // jshint maxcomplexity:16
                 for (var prop in source) {
                     if (_.isUndefined(obj[prop]) || _.isFunction(obj[prop]) || _.isNull(source[prop]) || _.isDate(source[prop])) {
                         obj[prop] = source[prop];

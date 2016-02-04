@@ -1,4 +1,5 @@
 {
+    "maxcomplexity": 10,
     "node": true,
     "browser": true,
     "esnext": true,
