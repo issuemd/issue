@@ -36,60 +36,62 @@
                 type: 'event'
             };
 
-            switch (evt.event) {
-                case 'closed':
-                    update.body = 'status: closed'; // evt.actor.login
-                    break;
-                case 'reopened':
-                    update.body = 'status: reopened'; // evt.actor.login
-                    break;
-                case 'merged':
-                    update.body = 'status: merged'; // evt.actor.login
-                    break;
-                case 'locked':
-                    update.body = 'locking: locked'; // evt.actor.login
-                    break;
-                case 'unlocked':
-                    update.body = 'locking: unlocked'; // evt.actor.login
-                    break;
-                case 'subscribed':
-                    update.body = 'subscribed: ' + evt.actor.login;
-                    break;
-                case 'mentioned':
-                    update.body = 'mentioned: ' + evt.actor.login;
-                    break;
-                case 'assigned':
-                    update.body = 'assigned: ' + evt.assignee.login;
-                    break;
-                case 'unassigned':
-                    update.body = 'unassigned: ' + evt.assignee.login;
-                    break;
+            var handlers = {
+                closed: function () {
+                    return 'status: closed';
+                },
+                reopened: function () {
+                    return 'status: reopened'; /* evt.actor.login */
+                },
+                merged: function () {
+                    return 'status: merged'; /* evt.actor.login */
+                },
+                locked: function () {
+                    return 'locking: locked'; /* evt.actor.login */
+                },
+                unlocked: function () {
+                    return 'locking: unlocked'; /* evt.actor.login */
+                },
+                subscribed: function (evt) {
+                    return 'subscribed: ' + evt.actor.login;
+                },
+                mentioned: function (evt) {
+                    return 'mentioned: ' + evt.actor.login;
+                },
+                assigned: function (evt) {
+                    return 'assigned: ' + evt.assignee.login;
+                },
+                unassigned: function (evt) {
+                    return 'unassigned: ' + evt.assignee.login;
+                },
+                labeled: function (evt) {
+                    return 'added label: ' + evt.label.name; /* evt.label.color */
+                },
+                unlabeled: function (evt) {
+                    return 'removed label: ' + evt.label.name; /* evt.label.color */
+                },
+                milestoned: function (evt) {
+                    return 'added milestone: ' + evt.milestone.title;
+                },
+                demilestoned: function (evt) {
+                    return 'removed milestone: ' + evt.milestone.title;
+                },
+                renamed: function (evt) {
+                    return 'renamed issue: ' + evt.rename.to; /* evt.rename.from */
+                },
+                head_ref_deleted: function () { // jshint ignore:line
+                    return 'branch: deleted';
+                },
+                head_ref_restored: function () { // jshint ignore:line
+                    return 'branch: restored';
+                },
+                referenced: function () {
+                    return 'The issue was referenced from a commit message';
+                }
+            };
 
-                case 'labeled':
-                    update.body = 'added label: ' + evt.label.name; // evt.label.color
-                    break;
-                case 'unlabeled':
-                    update.body = 'removed label: ' + evt.label.name; // evt.label.color
-                    break;
-                case 'milestoned':
-                    update.body = 'added milestone: ' + evt.milestone.title;
-                    break;
-                case 'demilestoned':
-                    update.body = 'removed milestone: ' + evt.milestone.title;
-                    break;
-                case 'renamed':
-                    update.body = 'renamed issue: ' + evt.rename.to; // evt.rename.from
-                    break;
-                case 'head_ref_deleted':
-                    update.body = 'branch: deleted';
-                    break;
-                case 'head_ref_restored':
-                    update.body = 'branch: restored';
-                    break;
-                case 'referenced':
-                    update.body = 'The issue was referenced from a commit message';
-                    break;
-
+            if (!!handlers[evt.event]) {
+                update.body = handlers[evt.event](evt);
             }
 
             this.filter('number', issueNo + '')
@@ -97,7 +99,7 @@
 
         };
 
-        issuemd.fn.addFromGithubJson = function (gitIssue) {
+        issuemd.fn.addFromGithubJson = function (gitIssue) { // jshint maxcomplexity:15
 
             var issue = issuemd({
 
@@ -110,23 +112,30 @@
 
             });
 
-            var repoName = gitIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
             var attr = {};
+
+            // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
+            var repoName = gitIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
             if (repoName) {
                 attr.project = repoName;
             }
+
             if (gitIssue.state) {
                 attr.status = gitIssue.state;
             }
+
             if (gitIssue.number) {
                 attr.number = gitIssue.number;
             }
+
             if (gitIssue.locked) {
                 attr.locked = gitIssue.locked;
             }
+
             if (gitIssue.assignee) {
                 attr.assignee = gitIssue.assignee.login;
             }
+
             if (gitIssue.updated_at) { // jshint ignore:line
                 attr.updated = helper.dateStringToIso(gitIssue.updated_at); // jshint ignore:line
             }
