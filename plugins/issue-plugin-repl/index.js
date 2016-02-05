@@ -2,7 +2,7 @@
 
 ! function () {
 
-    module.exports = function (issueConfig) { // helper, issuemd, issueTemplates
+    module.exports = function (issueConfig, helper) { // issuemd, issueTemplates
 
         var config = issueConfig();
 
@@ -11,9 +11,14 @@
             var repl = require('repl'),
                 spawnSync = require('child_process').spawnSync,
                 path = require('path'),
-                fs = require('fs'),
-                bin = path.join(path.dirname(fs.realpathSync(__filename)), '..', '..', 'bin', 'issue'),
-                command = config.set || '';
+                bin = path.join(__dirname, '..', '..', 'bin', 'issue'),
+                command = config.set || '',
+                prompt = function (command) {
+                    return [
+                        helper.chalk.bold.red('#') + helper.chalk.bold.white('issue'),
+                        command
+                    ].join(' ').trim() + ' ';
+                };
 
             function evaluate(cmd, context, filename, callback) {
                 spawnSync(bin, [command, cmd].join(' ').trim().split(/\s+/), {
@@ -23,7 +28,7 @@
             }
 
             repl.start({
-                prompt: ['#issue', command].join(' ').trim() + ' ',
+                prompt: prompt(command),
                 input: process.stdin,
                 output: process.stdout,
                 // avoid returning quoted string with newlines escaped
@@ -47,7 +52,7 @@
                 help: 'Set context for subsequent commands (clear with .clear)',
                 action: function (currentCommand) {
                     command = currentCommand;
-                    repl.repl._initialPrompt = ['#issue', command].join(' ').trim() + ' ';
+                    repl.repl._initialPrompt = prompt(command);
                     repl.repl.displayPrompt();
                 }
             };
