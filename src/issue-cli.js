@@ -10,38 +10,12 @@
 
         var fs = require('fs'),
             path = require('path'),
-            _ = require('underscore'),
-            issuemd = require('issuemd'),
-            src = path.join(path.dirname(fs.realpathSync(__filename)), '../src'),
-            issueConfig = require(src + '/issue-config.js').init(argv),
+            src = path.join(path.dirname(fs.realpathSync(__filename)), '../src', path.sep),
+            issueConfig = require('./issue-config.js').init(argv),
             config = issueConfig(),
-            helper = require(src + '/issue-helper.js')(config.technicolor),
-            cliParams = issueConfig().params,
-            issueTemplates = require(src + '/issue-templates.js'),
-            pluginDir = '../plugins/';
-
-        var plugins = {
-            init: require(src + '/issue-init.js')(issueConfig)
-        };
-
-        // enable all plugins by default
-        _.each(fs.readdirSync(__dirname + '/' + pluginDir), function (value) {
-            config.plugins = config.plugins || {};
-            if (fs.lstatSync(__dirname + '/' + pluginDir + value).isDirectory()) {
-                config.plugins[value] = config.plugins[value] || {};
-                if (typeof config.plugins[value].enabled === 'undefined') {
-                    config.plugins[value].enabled = true;
-                }
-            }
-        });
-
-        _.each(config.plugins, function (value, name) {
-            if (!!value.enabled) {
-                plugins[name] = require(pluginDir + name + '/main.js')(issueConfig, helper, issuemd, issueTemplates);
-            } else {
-                plugins[name] = false;
-            }
-        });
+            helper = require('./issue-helper.js')(config.technicolor),
+            plugins = require('./issue-plugins.js')(issueConfig, helper),
+            cliParams = issueConfig().params;
 
         bannerHandler(config, helper, fs, src);
 
@@ -54,19 +28,41 @@
             // if there is no sub-command, show help
             // else if there is a plugin, pass the subCommand to the plugin to handle
             // else if the plugin is disabled, show disabled plugin message
-            // else if the plugin is unconfigured, show unconfigured plugin message
             // else show unknown command message
             if (!cliParams.length) {
-                var helptext = fs.readFileSync(src + (config.help ? '/issue-cli-help.txt' : '/issue-cli-usage.txt')).toString('UTF-8');
+
+                var helptext;
+
+                if (config.help) {
+
+                    helptext = fs.readFileSync(src + 'issue-cli-help.txt', 'UTF-8');
+
+                    var pluginhelp = [];
+                    for (var name in plugins) {
+
+                        var plugin = plugins[name];
+                        if (plugin.helptext) {
+                            pluginhelp.push(name.slice(0, 1).toUpperCase() + name.slice(1) + ' plugin:\n\n' + plugin.helptext);
+                        }
+
+                    }
+
+                    if (pluginhelp.length) {
+                        helptext += '\n' + pluginhelp.join('\n\n') + '\n';
+                    }
+
+                } else {
+                    helptext = fs.readFileSync(src + 'issue-cli-usage.txt', 'UTF-8');
+                }
+
                 console.log(helptext);
+
             } else if (!!plugins[command]) {
                 cliParams.shift();
                 var subCommand = cliParams.shift();
                 return plugins[command](config, subCommand);
             } else if (plugins[command] === false) {
                 console.log('The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n');
-            } else if (helper.fileExists(__dirname + '/' + pluginDir + command + '/main.js')) {
-                console.log('The ' + command + ' plugin is not configured. You can enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n');
             } else {
                 console.log('Don\'t understand that command... sorry :-/');
             }
@@ -78,7 +74,7 @@
             var logo;
             if (config.banner !== false) {
                 if (config.width >= 80) {
-                    logo = fs.readFileSync(src + '/issue-cli-ascii-logo.txt').toString('UTF-8');
+                    logo = fs.readFileSync(src + 'issue-cli-ascii-logo.txt').toString('UTF-8');
                 } else {
                     logo = helper.chalk.red.bold('\n    #') + helper.chalk.white.bold('issue') + helper.chalk.grey(' cli - commanding your issues\n');
                 }

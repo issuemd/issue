@@ -4,31 +4,24 @@ Usage:
 
 Commands:
 
-  init                      - init `.issuerc` config file in current directory
-  config                    - list current configuration
-  config technicolor        - show value of `technicolor` config option
-  config technicolor false  - turn off colours in console (useful for ci)
-
-Github plugin:
-
-Search for repos, list issues for repo, and display issue details...
-
-  issue github search <search-term>                  - search github for repo
-  issue github show --repo <namespace/project>       - list issues for repo
-  issue github show --repo <namespace/project> <id>  - display specified issue
-  issue github limit                                 - display api rate limit
-  issue github login                                 - authenticate with github
+  init      - init `.issuerc` config file in current directory
+  config    - list current configuration
 
 Examples:
 
+Initialise config file in current directory...
+
+  issue init
+
+Display config for current context, which includes layered config files, and
+some environmental config...
+
   issue config
 
-  issue github search chancejs
-  issue github show --repo victorquinn/chancejs
-  issue github show --repo victorquinn/chancejs 207
+Show value of `technicolor` config option in current context...
 
-  issue github limit
-  cd ~ && issue init
-  issue github login
-  issue github limit
+  config technicolor
 
+Turn off colours in console (useful for ci)
+
+  config technicolor false

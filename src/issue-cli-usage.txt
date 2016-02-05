@@ -8,6 +8,5 @@ Help:
 
 Examples:
 
-  issue github search chancejs
-  issue github show --repo victorquinn/chancejs
-  issue github show --repo victorquinn/chancejs 207
+  issue init
+  issue config
