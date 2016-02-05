@@ -169,8 +169,7 @@
 
         };
 
-
-        return function (config, command) {
+        var github = function (config, command) {
 
             var filters, args;
 
@@ -305,7 +304,27 @@
 
         };
 
+        github.helptext = [
+            'Search for repos, list issues for repo, and display issue details...',
+            '',
+            '  issue github search <search-term>                  - search github for repo',
+            '  issue github show --repo <namespace/project>       - list issues for repo',
+            '  issue github show --repo <namespace/project> <id>  - display specified issue',
+            '  issue github limit                                 - display api rate limit',
+            '  issue github login                                 - authenticate with github',
+            '',
+            'e.g.',
+            '',
+            '  issue github search chancejs',
+            '  issue github show --repo victorquinn/chancejs',
+            '  issue github show --repo victorquinn/chancejs 207',
+            '',
+            '  issue github limit',
+            '  issue github login',
+            '  issue github limit'
+        ].join('\n');
 
+        return github;
 
         function autoDetectRepo(configRepo, configAutoDectect, configGitRemote) {
 

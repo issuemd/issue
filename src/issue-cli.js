@@ -30,8 +30,33 @@
             // else if the plugin is disabled, show disabled plugin message
             // else show unknown command message
             if (!cliParams.length) {
-                var helptext = fs.readFileSync(src + (config.help ? 'issue-cli-help.txt' : 'issue-cli-usage.txt')).toString('UTF-8');
+
+                var helptext;
+
+                if (config.help) {
+
+                    helptext = fs.readFileSync(src + 'issue-cli-help.txt', 'UTF-8');
+
+                    var pluginhelp = [];
+                    for (var name in plugins) {
+
+                        var plugin = plugins[name];
+                        if (plugin.helptext) {
+                            pluginhelp.push(name.slice(0, 1).toUpperCase() + name.slice(1) + ' plugin:\n\n' + plugin.helptext);
+                        }
+
+                    }
+
+                    if (pluginhelp.length) {
+                        helptext += '\n' + pluginhelp.join('\n\n') + '\n';
+                    }
+
+                } else {
+                    helptext = fs.readFileSync(src + 'issue-cli-usage.txt', 'UTF-8');
+                }
+
                 console.log(helptext);
+
             } else if (!!plugins[command]) {
                 cliParams.shift();
                 var subCommand = cliParams.shift();
