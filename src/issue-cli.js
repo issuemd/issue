@@ -11,12 +11,11 @@
         var fs = require('fs'),
             path = require('path'),
             src = path.join(path.dirname(fs.realpathSync(__filename)), '../src', path.sep),
-            issueConfig = require(src + 'issue-config.js').init(argv),
+            issueConfig = require('./issue-config.js').init(argv),
             config = issueConfig(),
-            helper = require(src + 'issue-helper.js')(config.technicolor),
+            helper = require('./issue-helper.js')(config.technicolor),
+            plugins = require('./issue-plugins.js')(issueConfig, helper),
             cliParams = issueConfig().params;
-
-        var plugins = handlePlugins(src, config, issueConfig, helper, fs);
 
         bannerHandler(config, helper, fs, src);
 
@@ -93,63 +92,6 @@
                 }
                 break;
         }
-    }
-
-    function handlePlugins(src, config, issueConfig, helper, fs) {
-
-        var path = require('path'),
-            _ = require('underscore'),
-            issuemd = require('issuemd'),
-            issueTemplates = require(path.join(src, 'issue-templates.js')),
-            pluginDirs = [
-                path.join(__dirname, '..', 'plugins', path.sep),
-                path.join(__dirname, '..', '..', 'node_modules', path.sep)
-            ];
-
-        var plugins = {
-            init: require(src + 'issue-init.js')(issueConfig)
-        };
-
-        _.each(pluginDirs, function (pluginDir) {
-
-            if (helper.fileExists(pluginDir) && fs.lstatSync(pluginDir).isDirectory()) {
-
-                // enable all plugins by default
-                _.each(fs.readdirSync(pluginDir), function (projectName) {
-
-                    var value,
-                        packageJson;
-
-                    if (/^issue-plugin-.+/.test(projectName)) {
-
-                        value = projectName.match(/^issue-plugin-(.+)/)[1];
-                        config.plugins = config.plugins || {};
-
-                        if (fs.lstatSync(pluginDir + projectName).isDirectory()) {
-
-                            config.plugins[value] = config.plugins[value] || {};
-
-                            if (typeof config.plugins[value].enabled === 'undefined') {
-                                config.plugins[value].enabled = true;
-                            }
-
-                            if (!!config.plugins[value].enabled) {
-                                packageJson = require(pluginDir + projectName + path.sep + 'package.json');
-                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(issueConfig, helper, issuemd, issueTemplates);
-                            } else {
-                                plugins[value] = false;
-                            }
-
-                        }
-                    }
-                });
-
-            }
-
-        });
-
-        return plugins;
-
     }
 
 }();
