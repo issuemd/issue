@@ -10,38 +10,13 @@
 
         var fs = require('fs'),
             path = require('path'),
-            _ = require('underscore'),
-            issuemd = require('issuemd'),
-            src = path.join(path.dirname(fs.realpathSync(__filename)), '../src'),
-            issueConfig = require(src + '/issue-config.js').init(argv),
+            src = path.join(path.dirname(fs.realpathSync(__filename)), '../src', path.sep),
+            issueConfig = require(src + 'issue-config.js').init(argv),
             config = issueConfig(),
-            helper = require(src + '/issue-helper.js')(config.technicolor),
-            cliParams = issueConfig().params,
-            issueTemplates = require(src + '/issue-templates.js'),
-            pluginDir = '../plugins/';
+            helper = require(src + 'issue-helper.js')(config.technicolor),
+            cliParams = issueConfig().params;
 
-        var plugins = {
-            init: require(src + '/issue-init.js')(issueConfig)
-        };
-
-        // enable all plugins by default
-        _.each(fs.readdirSync(__dirname + '/' + pluginDir), function (value) {
-            config.plugins = config.plugins || {};
-            if (fs.lstatSync(__dirname + '/' + pluginDir + value).isDirectory()) {
-                config.plugins[value] = config.plugins[value] || {};
-                if (typeof config.plugins[value].enabled === 'undefined') {
-                    config.plugins[value].enabled = true;
-                }
-            }
-        });
-
-        _.each(config.plugins, function (value, name) {
-            if (!!value.enabled) {
-                plugins[name] = require(pluginDir + name + '/main.js')(issueConfig, helper, issuemd, issueTemplates);
-            } else {
-                plugins[name] = false;
-            }
-        });
+        var plugins = handlePlugins(src, config, issueConfig, helper, fs);
 
         bannerHandler(config, helper, fs, src);
 
@@ -54,10 +29,9 @@
             // if there is no sub-command, show help
             // else if there is a plugin, pass the subCommand to the plugin to handle
             // else if the plugin is disabled, show disabled plugin message
-            // else if the plugin is unconfigured, show unconfigured plugin message
             // else show unknown command message
             if (!cliParams.length) {
-                var helptext = fs.readFileSync(src + (config.help ? '/issue-cli-help.txt' : '/issue-cli-usage.txt')).toString('UTF-8');
+                var helptext = fs.readFileSync(src + (config.help ? 'issue-cli-help.txt' : 'issue-cli-usage.txt')).toString('UTF-8');
                 console.log(helptext);
             } else if (!!plugins[command]) {
                 cliParams.shift();
@@ -65,8 +39,6 @@
                 return plugins[command](config, subCommand);
             } else if (plugins[command] === false) {
                 console.log('The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n');
-            } else if (helper.fileExists(__dirname + '/' + pluginDir + command + '/main.js')) {
-                console.log('The ' + command + ' plugin is not configured. You can enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n');
             } else {
                 console.log('Don\'t understand that command... sorry :-/');
             }
@@ -78,7 +50,7 @@
             var logo;
             if (config.banner !== false) {
                 if (config.width >= 80) {
-                    logo = fs.readFileSync(src + '/issue-cli-ascii-logo.txt').toString('UTF-8');
+                    logo = fs.readFileSync(src + 'issue-cli-ascii-logo.txt').toString('UTF-8');
                 } else {
                     logo = helper.chalk.red.bold('\n    #') + helper.chalk.white.bold('issue') + helper.chalk.grey(' cli - commanding your issues\n');
                 }
@@ -121,6 +93,63 @@
                 }
                 break;
         }
+    }
+
+    function handlePlugins(src, config, issueConfig, helper, fs) {
+
+        var path = require('path'),
+            _ = require('underscore'),
+            issuemd = require('issuemd'),
+            issueTemplates = require(path.join(src, 'issue-templates.js')),
+            pluginDirs = [
+                path.join(__dirname, '..', 'plugins', path.sep),
+                path.join(__dirname, '..', '..', 'node_modules', path.sep)
+            ];
+
+        var plugins = {
+            init: require(src + 'issue-init.js')(issueConfig)
+        };
+
+        _.each(pluginDirs, function (pluginDir) {
+
+            if (helper.fileExists(pluginDir) && fs.lstatSync(pluginDir).isDirectory()) {
+
+                // enable all plugins by default
+                _.each(fs.readdirSync(pluginDir), function (projectName) {
+
+                    var value,
+                        packageJson;
+
+                    if (/^issue-plugin-.+/.test(projectName)) {
+
+                        value = projectName.match(/^issue-plugin-(.+)/)[1];
+                        config.plugins = config.plugins || {};
+
+                        if (fs.lstatSync(pluginDir + projectName).isDirectory()) {
+
+                            config.plugins[value] = config.plugins[value] || {};
+
+                            if (typeof config.plugins[value].enabled === 'undefined') {
+                                config.plugins[value].enabled = true;
+                            }
+
+                            if (!!config.plugins[value].enabled) {
+                                packageJson = require(pluginDir + projectName + path.sep + 'package.json');
+                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(issueConfig, helper, issuemd, issueTemplates);
+                            } else {
+                                plugins[value] = false;
+                            }
+
+                        }
+                    }
+                });
+
+            }
+
+        });
+
+        return plugins;
+
     }
 
 }();
