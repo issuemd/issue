@@ -1,7 +1,7 @@
 {
   "name": "issue-plugin-github",
-  "version": "1.0.0",
-  "description": "",
+  "version": "0.0.1",
+  "description": "Github plugin for issue cli, fetching issues from github api",
   "main": "main.js",
   "directories": {
     "test": "tests"
@@ -9,6 +9,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "Billy Moon <billy@issue.md>",
+  "contributors": [
+    {
+      "name": "Luka Siric",
+      "email": "luka@issue.md"
+    }
+  ],
+  "license": "MIT"
 }
