@@ -31,7 +31,7 @@
             var parentRE = /#{\s*?_\s*?}/,
                 slice = Array.prototype.slice;
 
-            _.each(slice.call(arguments, 1), function (source) {
+            _.each(slice.call(arguments, 1), function (source) { // jshint maxcomplexity:16
                 for (var prop in source) {
                     if (_.isUndefined(obj[prop]) || _.isFunction(obj[prop]) || _.isNull(source[prop]) || _.isDate(source[prop])) {
                         obj[prop] = source[prop];
@@ -170,6 +170,7 @@
                 }
             });
             myConfig = _.defaults(myConfig, {
+                // subtract one form column width on windows to avoid insertion of empty lines
                 width: process.stdout.columns - (process.platform === 'win32' ? 1 : 0)
             });
             return myConfig;

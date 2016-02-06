@@ -1,0 +1,12 @@
+Usage:
+
+  issue [<plugin>] <command> [sub-command] [parameters]
+
+Help:
+
+  issue --help
+
+Examples:
+
+  issue init
+  issue config

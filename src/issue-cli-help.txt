@@ -1,0 +1,27 @@
+Usage:
+
+  issue [<plugin>] <command> [sub-command] [parameters]
+
+Commands:
+
+  init      - init `.issuerc` config file in current directory
+  config    - list current configuration
+
+Examples:
+
+Initialise config file in current directory...
+
+  issue init
+
+Display config for current context, which includes layered config files, and
+some environmental config...
+
+  issue config
+
+Show value of `technicolor` config option in current context...
+
+  config technicolor
+
+Turn off colours in console (useful for ci)
+
+  config technicolor false

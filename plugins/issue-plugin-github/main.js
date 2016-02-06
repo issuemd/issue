@@ -36,60 +36,62 @@
                 type: 'event'
             };
 
-            switch (evt.event) {
-                case 'closed':
-                    update.body = 'status: closed'; // evt.actor.login
-                    break;
-                case 'reopened':
-                    update.body = 'status: reopened'; // evt.actor.login
-                    break;
-                case 'merged':
-                    update.body = 'status: merged'; // evt.actor.login
-                    break;
-                case 'locked':
-                    update.body = 'locking: locked'; // evt.actor.login
-                    break;
-                case 'unlocked':
-                    update.body = 'locking: unlocked'; // evt.actor.login
-                    break;
-                case 'subscribed':
-                    update.body = 'subscribed: ' + evt.actor.login;
-                    break;
-                case 'mentioned':
-                    update.body = 'mentioned: ' + evt.actor.login;
-                    break;
-                case 'assigned':
-                    update.body = 'assigned: ' + evt.assignee.login;
-                    break;
-                case 'unassigned':
-                    update.body = 'unassigned: ' + evt.assignee.login;
-                    break;
+            var handlers = {
+                closed: function () {
+                    return 'status: closed';
+                },
+                reopened: function () {
+                    return 'status: reopened'; /* evt.actor.login */
+                },
+                merged: function () {
+                    return 'status: merged'; /* evt.actor.login */
+                },
+                locked: function () {
+                    return 'locking: locked'; /* evt.actor.login */
+                },
+                unlocked: function () {
+                    return 'locking: unlocked'; /* evt.actor.login */
+                },
+                subscribed: function (evt) {
+                    return 'subscribed: ' + evt.actor.login;
+                },
+                mentioned: function (evt) {
+                    return 'mentioned: ' + evt.actor.login;
+                },
+                assigned: function (evt) {
+                    return 'assigned: ' + evt.assignee.login;
+                },
+                unassigned: function (evt) {
+                    return 'unassigned: ' + evt.assignee.login;
+                },
+                labeled: function (evt) {
+                    return 'added label: ' + evt.label.name; /* evt.label.color */
+                },
+                unlabeled: function (evt) {
+                    return 'removed label: ' + evt.label.name; /* evt.label.color */
+                },
+                milestoned: function (evt) {
+                    return 'added milestone: ' + evt.milestone.title;
+                },
+                demilestoned: function (evt) {
+                    return 'removed milestone: ' + evt.milestone.title;
+                },
+                renamed: function (evt) {
+                    return 'renamed issue: ' + evt.rename.to; /* evt.rename.from */
+                },
+                head_ref_deleted: function () { // jshint ignore:line
+                    return 'branch: deleted';
+                },
+                head_ref_restored: function () { // jshint ignore:line
+                    return 'branch: restored';
+                },
+                referenced: function () {
+                    return 'The issue was referenced from a commit message';
+                }
+            };
 
-                case 'labeled':
-                    update.body = 'added label: ' + evt.label.name; // evt.label.color
-                    break;
-                case 'unlabeled':
-                    update.body = 'removed label: ' + evt.label.name; // evt.label.color
-                    break;
-                case 'milestoned':
-                    update.body = 'added milestone: ' + evt.milestone.title;
-                    break;
-                case 'demilestoned':
-                    update.body = 'removed milestone: ' + evt.milestone.title;
-                    break;
-                case 'renamed':
-                    update.body = 'renamed issue: ' + evt.rename.to; // evt.rename.from
-                    break;
-                case 'head_ref_deleted':
-                    update.body = 'branch: deleted';
-                    break;
-                case 'head_ref_restored':
-                    update.body = 'branch: restored';
-                    break;
-                case 'referenced':
-                    update.body = 'The issue was referenced from a commit message';
-                    break;
-
+            if (!!handlers[evt.event]) {
+                update.body = handlers[evt.event](evt);
             }
 
             this.filter('number', issueNo + '')
@@ -97,7 +99,7 @@
 
         };
 
-        issuemd.fn.addFromGithubJson = function (gitIssue) {
+        issuemd.fn.addFromGithubJson = function (gitIssue) { // jshint maxcomplexity:15
 
             var issue = issuemd({
 
@@ -110,23 +112,30 @@
 
             });
 
-            var repoName = gitIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
             var attr = {};
+
+            // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
+            var repoName = gitIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
             if (repoName) {
                 attr.project = repoName;
             }
+
             if (gitIssue.state) {
                 attr.status = gitIssue.state;
             }
+
             if (gitIssue.number) {
                 attr.number = gitIssue.number;
             }
+
             if (gitIssue.locked) {
                 attr.locked = gitIssue.locked;
             }
+
             if (gitIssue.assignee) {
                 attr.assignee = gitIssue.assignee.login;
             }
+
             if (gitIssue.updated_at) { // jshint ignore:line
                 attr.updated = helper.dateStringToIso(gitIssue.updated_at); // jshint ignore:line
             }
@@ -160,10 +169,9 @@
 
         };
 
+        var github = function (config, command) {
 
-        return function (config, command) {
-
-            var filters, apicall, args;
+            var filters, args;
 
             var deferred = Q.defer();
 
@@ -232,68 +240,63 @@
 
                     break;
 
+                case 'list':
                 case 'show':
 
                     filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
 
-                    switch (config.params.length) {
+                    if (!!repo && config.params.length === 0) {
 
-                        case 3:
-                        case 1:
-
-                            // parameters
-                            //     $ issue github search moment moment 2805
-                            // ... else as options
-                            //     $ issue --repo moment/moment github search 2805
-                            if (config.params.length === 3) {
-                                args = [config.params[0], config.params[1], config.params[2], filters];
-                            } else if (!!repo) {
-                                args = [repo.namespace, repo.id, config.params[0], filters];
-                            }
-
-                            fetchIssue.apply(this, args)
-                                .then(function (response) {
-                                    var issues = fetchIssueSuccess(response);
-                                    // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
-                                    var templateOptions = _.pick(localConfig, 'dim');
-                                    console.log(issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)));
-                                })
-                                .then(function () {
+                        listIssues(repo.namespace, repo.id, filters)
+                            .then(function (response) {
+                                listSuccess(response);
+                                fetchNextPage(response.headers, listSuccess, responseError, function () {
                                     deferred.resolve();
-                                })
-                                .fail(responseError);
-                            break;
+                                }, config.answer || 'ask');
+                            })
+                            .fail(responseError);
 
-                        case 0:
-                        case 2:
+                    } else if (config.params.length === 1 && config.params[0] === 'mine') {
 
-                            // non personal issues as parameters
-                            //     $ issue github search moment moment
-                            // ... else as options
-                            //     $ issue --repo moment/moment github search
-                            // ... else personal issues
-                            if (config.params.length >= 2) {
-                                apicall = listIssues(config.params[0], config.params[1], filters);
-                            } else if (!!repo) {
-                                apicall = listIssues(repo.namespace, repo.id, filters);
-                            } else {
-                                apicall = listPersonalIssues(filters);
-                            }
+                        listPersonalIssues(filters)
+                            .then(function (response) {
+                                listSuccess(response);
+                                fetchNextPage(response.headers, listSuccess, responseError, function () {
+                                    deferred.resolve();
+                                }, config.answer || 'ask');
+                            })
+                            .fail(responseError);
 
-                            apicall
-                                .then(function (response) {
-                                    listSuccess(response);
-                                    fetchNextPage(response.headers, listSuccess, responseError, function () {
-                                        deferred.resolve();
-                                    }, config.answer || 'ask');
-                                })
-                                .fail(responseError);
+                    } else if (!!repo && config.params.length === 1 && command === 'show') {
 
-                            break;
+                        // $ issue --repo moment/moment github search 2805
+                        args = [repo.namespace, repo.id, config.params[0], filters];
 
+                        fetchIssue.apply(this, args)
+                            .then(function (response) {
+                                var issues = fetchIssueSuccess(response);
+                                // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
+                                var templateOptions = _.pick(localConfig, 'dim');
+                                console.log(issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)));
+                            })
+                            .then(function () {
+                                deferred.resolve();
+                            })
+                            .fail(responseError);
+                    } else {
+                        console.log([
+                            'Usage:',
+                            '',
+                            '  issue github list mine',
+                            '  issue github list --repo <namespace/project>',
+                            '  issue github show --repo <namespace/project> <id>',
+                            '',
+                            'Example:',
+                            '',
+                            '  issue github show --repo victorquinn/chancejs 207',
+                            ''
+                        ].join('\n'));
                     }
-
-                    break;
 
             }
 
@@ -301,7 +304,27 @@
 
         };
 
+        github.helptext = [
+            'Search for repos, list issues for repo, and display issue details...',
+            '',
+            '  issue github search <search-term>                  - search github for repo',
+            '  issue github show --repo <namespace/project>       - list issues for repo',
+            '  issue github show --repo <namespace/project> <id>  - display specified issue',
+            '  issue github limit                                 - display api rate limit',
+            '  issue github login                                 - authenticate with github',
+            '',
+            'e.g.',
+            '',
+            '  issue github search chancejs',
+            '  issue github show --repo victorquinn/chancejs',
+            '  issue github show --repo victorquinn/chancejs 207',
+            '',
+            '  issue github limit',
+            '  issue github login',
+            '  issue github limit'
+        ].join('\n');
 
+        return github;
 
         function autoDetectRepo(configRepo, configAutoDectect, configGitRemote) {
 
