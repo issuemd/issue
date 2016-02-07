@@ -39,8 +39,27 @@
                     break;
 
                 case 'search':
-                    search(config.params[0], filters, loadMore)
-                        .then(deferred.resolve);
+                    // if --repo or -r specified, we're searching for a repository
+                    if(!!config.repo || !!config.r){
+                        search(config.repo || config.r, filters, loadMore)
+                            .then(deferred.resolve);
+                    }
+                    // if --issues or --i specified, we're searching for issues
+                    else if(!!config.issues || !!config.i){
+                        searchIssues(config.issues || config.i, config.sort, config.order, loadMore)
+                            .then(deferred.resolve);
+                    }else{
+                        console.log([
+                            'Unknown search type parameter',
+                            '',
+                            'You can set --r or --repo paremeters for respository search, or --i or --issues parameters for issues search',
+                            '',
+                            'Example:',
+                            '',
+                            '  issue github search --r chancejs',
+                            ''
+                        ].join('\n'));
+                    }
                     break;
 
                 case 'list':
@@ -224,6 +243,28 @@
         }
 
 
+        function searchIssues (searchTerm, sort, order, loadMore) {
+           var deferred = Q.defer();
+            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
+                var g = helper.chalk.gray;
+                console.log(g('Warning, user not logged in, private issues are not listed...'));
+            }
+
+            github.searchIssues(searchTerm, sort, order)
+                .then(function (response) {
+                    searchIssuesSuccess(response);
+                    var g = helper.chalk.green;
+                    // display number of results after 1st page
+                    console.log('Total results: ' + g(response.data.total_count));
+                    github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
+                        .then(deferred.resolve)
+                        .fail(deferred.reject);
+                })
+                .fail(responseError);
+
+            return deferred.promise;
+        }
+
         // ******************************************
         // ISSUES
         // ******************************************
@@ -318,6 +359,39 @@
             });
 
             var templateOptions = _.pick(localConfig, 'dim');
+            console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
+
+        }
+
+        function searchIssuesSuccess(response) {
+
+            var data = response.data.items;
+            var issues = issuemd();
+            var githubIssues = _.isArray(data) ? data : [data];
+
+            _.each(githubIssues, function (githubIssue) {
+
+                // should we introduce new template for search issues
+                // and capture different fields, adjusted to the template?
+                var issue = issuemd({})
+                    .attr({
+                        title: githubIssue.title,
+                        creator: helper.personFromParts({
+                            username: githubIssue.user.login
+                        }),
+                        created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
+                        body: githubIssue.body,
+                        id: githubIssue.number,
+                        assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
+                        status: githubIssue.state || ''
+                    });
+
+                issues.merge(issue);
+
+            });
+
+            var templateOptions = _.pick(localConfig, 'dim');
+
             console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
 
         }

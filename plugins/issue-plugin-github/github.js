@@ -188,7 +188,8 @@
             listPersonalIssues: listPersonalIssues,
             fetchIssue: fetchIssue,
             fetchIssueComments: fetchIssueComments,
-            fetchIssueEvents: fetchIssueEvents
+            fetchIssueEvents: fetchIssueEvents,
+            searchIssues: searchIssues
         };
 
 
@@ -382,6 +383,29 @@
                         });
                     });
             }
+
+            return deferred.promise;
+        }
+
+
+
+        // ******************************************
+        // ISSUES SEARCH
+        // ******************************************
+
+        function searchIssues(searchTerm, sort, order) {
+            var deferred = Q.defer();
+
+            api.searchIssues(searchTerm, sort, order)
+                .then(function (response) {
+                    deferred.resolve(response);
+                })
+                .fail(function (error) {
+                    deferred.reject({
+                        error: error.error,
+                        message: error.message
+                    });
+                });
 
             return deferred.promise;
         }
