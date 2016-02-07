@@ -54,6 +54,13 @@
                         .then(deferred.resolve);
                     break;
 
+                case 'export':
+
+                    handleExport(config)
+                        .then(deferred.resolve);
+
+                    break;
+
                 default:
                     console.log([
                         'Unknown command',
@@ -108,6 +115,101 @@
         // ******************************************
         // LIMIT
         // ******************************************
+
+        function handleExport(config) {
+
+            var deferred = Q.defer();
+
+            var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
+
+            var filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
+
+            var issueList = [];
+
+            var buildIssueList = function (response) {
+                issueList = issueList.concat(_.map(response.data, function (item) {
+                    return _.pick(item, 'number', 'updated_at');
+                }));
+            };
+
+            var writeIssueToDisk = function (issues) {
+
+                var path = require('path'),
+                    fs = require('fs'),
+                    mkdirp = require('mkdirp'),
+                    mypath = path.resolve(config.dest),
+                    filename;
+
+                issues.each(function (issue) {
+
+                    try {
+                        mkdirp.sync(mypath);
+                        fs.accessSync(mypath);
+                        filename = path.join(mypath, issue.attr('project') + '-' + issue.attr('number') + '.issue.md');
+                        fs.writeFileSync(filename, issue.md());
+                        console.log('Writing to disk: ' + path.relative(process.cwd(), filename));
+                    } catch (e) {
+                        console.log(e);
+                    }
+
+                });
+
+            };
+
+            github.listIssues(repo.namespace, repo.id, filters).then(function (response) {
+
+                buildIssueList(response);
+
+                github.fetchNextPage(response.headers, buildIssueList, function () {}, function () {
+
+                    var nextIssue = function () {
+
+                        if (issueList.length) {
+                            getIssue(issueList.pop());
+                        } else {
+                            deferred.resolve();
+                        }
+
+                    };
+
+                    var getIssue = function (issueInfo) {
+                        var path = require('path'),
+                            fs = require('fs'),
+                            localissue,
+                            localdate,
+                            remotedate = new Date(issueInfo.updated_at), // jshint ignore:line
+                            mypath = path.resolve(config.dest),
+                            filename = path.join(mypath, repo.id + '-' + issueInfo.number + '.issue.md');
+                        try {
+                            localissue = issuemd(fs.readFileSync(filename, 'utf8'));
+                            localdate = new Date(localissue.eq(0).updates().reduce(function (memo, event) {
+                                return event.type !== 'reference' ? event : memo;
+                            }, localissue.attr('created')));
+                        } catch (e) {
+                            if (e.code !== 'ENOENT') {
+                                console.log(e);
+                            }
+                        }
+                        if (!localissue || localdate < remotedate) {
+                            github.fetchIssue(repo.namespace, repo.id, issueInfo.number, filters)
+                                .then(function (response) {
+                                    writeIssueToDisk(fetchIssueSuccess(response));
+                                    nextIssue();
+                                });
+                        } else {
+                            nextIssue();
+                        }
+                    };
+
+                    nextIssue();
+
+                }, config.answer || 'ask');
+
+            });
+
+            return deferred.promise;
+
+        }
 
         function limit() {
             return github.rateLimit()

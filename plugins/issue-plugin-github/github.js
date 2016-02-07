@@ -87,7 +87,15 @@
                     return 'branch: restored';
                 },
                 referenced: function () {
+                    update.type = 'reference';
                     return 'The issue was referenced from a commit message';
+                },
+                // synthesised events
+                pull_request: function () { // jshint ignore:line
+                    return 'pull request opened';
+                },
+                update: function () { // jshint ignore:line
+                    return 'update to issue';
                 }
             };
 
@@ -411,7 +419,80 @@
             return api.getPersonalIssues(filters);
         }
 
+        function fetchIssuePullRequests(user, repository, number) {
+
+            return api.getIssuePullRequests(user, repository, number);
+
+        }
+
+        function getCommentsAndEvents(user, repository, number, issue, deferred) {
+            // fetch all comments and add them to the queue
+            fetchIssueComments(user, repository, number)
+                .then(function (comments) {
+                    issue.comments = comments;
+                    fetchIssueEvents(user, repository, number)
+                        .then(function (events) { // jshint maxcomplexity:15
+                            issue.events = events;
+                            if (!!issue.pull_request) { // jshint ignore:line
+                                fetchIssuePullRequests(user, repository, number).then(function (response) {
+                                    if (response.data.updated_at) { // jshint ignore:line
+                                        issue.events.push({
+                                            event: 'pull_request',
+                                            actor: {
+                                                login: response.data.user.login
+                                            },
+                                            created_at: response.data.updated_at // jshint ignore:line
+                                        });
+                                    }
+                                    deferred.resolve(issue);
+                                });
+                            } else {
+                                var lastKnownUpdate;
+                                if (issue.comments.length) {
+                                    lastKnownUpdate = issue.comments[issue.comments.length - 1].updated_at; // jshint ignore:line
+                                }
+                                var dereferencedEvents = issue.events.reduce(function (memo, item) {
+                                    if (item.event !== 'referenced') {
+                                        memo.push(item);
+                                    }
+                                    return memo;
+                                }, []);
+                                if (dereferencedEvents.length) {
+                                    var eventUpdate = dereferencedEvents[dereferencedEvents.length - 1].created_at; // jshint ignore:line
+                                    if (new Date(eventUpdate) > new Date(lastKnownUpdate)) {
+                                        lastKnownUpdate = eventUpdate;
+                                    }
+                                }
+                                if (!!lastKnownUpdate || (!issue.comments.length && !issue.events.length)) { // jshint ignore:line
+                                    var bestGuess;
+                                    if (!!lastKnownUpdate && new Date(lastKnownUpdate) > new Date(issue.updated_at)) { // jshint ignore:line
+                                        bestGuess = lastKnownUpdate;
+                                    } else if (issue.updated_at && issue.created_at !== issue.updated_at) { // jshint ignore:line
+                                        if (!lastKnownUpdate || new Date(lastKnownUpdate) < new Date(issue.updated_at)) { // jshint ignore:line
+                                            bestGuess = issue.updated_at; // jshint ignore:line
+                                        }
+                                    } else if (!!lastKnownUpdate && new Date(lastKnownUpdate) < new Date(issue.updated_at)) { // jshint ignore:line
+                                        bestGuess = issue.updated_at; // jshint ignore:line
+                                    }
+                                    var newevent = {
+                                        event: 'update',
+                                        actor: {
+                                            login: issue.user.login
+                                        },
+                                        created_at: bestGuess // jshint ignore:line
+                                    };
+                                    if (!!bestGuess) {
+                                        issue.events.push(newevent);
+                                    }
+                                }
+                                deferred.resolve(issue);
+                            }
+                        });
+                });
+        }
+
         function fetchIssue(user, repository, number) {
+
             var deferred = Q.defer();
 
             api.getIssue(user, repository, number)
@@ -419,38 +500,15 @@
 
                     var issue = response.data;
 
-                    // fetch all comments and add them to the queue
-                    fetchIssueComments(user, repository, number)
-                        .then(function (comments) {
-                            issue.comments = comments;
-                            fetchIssueEvents(user, repository, number)
-                                .then(function (events) {
-                                    issue.events = events;
-                                    deferred.resolve(issue);
-                                })
-                                .fail(function (error) {
-                                    deferred.reject({
-                                        error: error.error,
-                                        message: error.message
-                                    });
-                                });
-                        })
-                        .fail(function (error) {
-                            deferred.reject({
-                                error: error.error,
-                                message: error.message
-                            });
-                        });
+                    getCommentsAndEvents(user, repository, number, issue, deferred);
 
                 })
                 .fail(function (error) {
-                    deferred.reject({
-                        error: error.error,
-                        message: error.message
-                    });
+                    deferred.reject(error);
                 });
 
             return deferred.promise;
+
         }
 
         function fetchIssueComments(user, repository, number) {

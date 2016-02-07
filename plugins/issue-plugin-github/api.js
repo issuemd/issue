@@ -31,6 +31,7 @@ module.exports = function () {
             search: search,
             getIssues: getIssues,
             getIssue: getIssue,
+            getIssuePullRequests: getIssuePullRequests,
             getIssueComments: getIssueComments,
             getIssueEvents: getIssueEvents,
             getPersonalIssues: getPersonalIssues
@@ -103,6 +104,11 @@ module.exports = function () {
 
         function getIssue(user, repository, number) {
             var url = '/repos/' + user + '/' + repository + '/issues' + '/' + number;
+            return ajaxWrapper(url);
+        }
+
+        function getIssuePullRequests(user, repository, number) {
+            var url = '/repos/' + user + '/' + repository + '/pulls/' + number;
             return ajaxWrapper(url);
         }
 
