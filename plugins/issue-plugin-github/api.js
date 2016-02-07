@@ -97,7 +97,7 @@ module.exports = function () {
             return ajaxWrapper(url, null, filters);
         }
 
-        function searchIssues (q, filters) {
+        function searchIssues(q, filters) {
             var url = '/search/issues?q=' + (q || '');
             return ajaxWrapper(url, null, filters);
         }

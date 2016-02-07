@@ -193,38 +193,42 @@
         // SEARCH
         // ******************************************
 
-        function search (config, filters, loadMore) {
+        function search(config, filters, loadMore) {
 
             var deferred = Q.defer();
 
             // if --repo or -r specified, we're searching for a repository
-            if(!!config.repo || !!config.r){
+            if (!!config.repo || !!config.r) {
 
                 github.searchRepository(config.repo || config.r, filters)
                     .then(function (response) {
                         searchSuccess(response);
+                        var g = helper.chalk.green;
+                        // display number of results after 1st page
+                        console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
                         github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
-                            .then(deferred.resolve);
+                            .then(deferred.resolve)
+                            .fail(deferred.reject);
                     })
                     .fail(responseError);
 
             }
             // if --issues or --i specified, we're searching for issues
-            else if(!!config.issues || !!config.i){
+            else if (!!config.issues || !!config.i) {
 
                 github.searchIssues(config.issues || config.i, filters)
                     .then(function (response) {
                         searchIssuesSuccess(response);
                         var g = helper.chalk.green;
                         // display number of results after 1st page
-                        console.log('Total results: ' + g(response.data.total_count));
+                        console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
                         github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
                             .then(deferred.resolve)
                             .fail(deferred.reject);
                     })
                     .fail(responseError);
 
-            }else{
+            } else {
                 console.log([
                     'Unknown search type parameter',
                     '',
