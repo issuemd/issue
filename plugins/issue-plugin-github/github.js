@@ -520,7 +520,8 @@
         // recursive function to handle github pagination
         function fetchNextPage(headers, onPageSuccess, onPageError, onComplete, promptAnswer) {
 
-            var pages = getPages(headers);
+            var pages = getPages(headers),
+                deferred = Q.defer();
 
             // if there are more pages
             if (pages.next) {
@@ -539,10 +540,13 @@
                 callCompleteCallback();
             }
 
+            return deferred.promise;
+
             function callCompleteCallback() {
                 if (_.isFunction(onComplete)) {
                     onComplete();
                 }
+                deferred.resolve();
             }
 
             function callApiNextPage() {
@@ -554,7 +558,8 @@
                             onPageSuccess(response);
                         }
                         // check if there are more pages to fetch
-                        fetchNextPage(response.headers, onPageSuccess, onPageError, onComplete, promptAnswer);
+                        fetchNextPage(response.headers, onPageSuccess, onPageError, onComplete, promptAnswer)
+                            .then(deferred.resolve);
                     })
                     .fail(onPageError);
             }

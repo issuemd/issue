@@ -6,48 +6,54 @@
 
         var HOSTNAME = require('os').hostname();
 
-        var localConfig = issueConfig();
-        var templates = issueTemplates(helper.chalk);
-        var _ = require('underscore');
+        var _ = require('underscore'),
+            Q = require('q');
+
         var github = require('./github.js')(issueConfig, helper, issuemd);
 
+        var localConfig = issueConfig(),
+            templates = issueTemplates(helper.chalk),
+            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars']);
 
         var githubCli = function (config, command) {
 
-            var LOAD_MORE = config.answer || 'ask';
+            var deferred = Q.defer();
+
+            var loadMore = config.answer || 'ask';
 
             switch (command) {
+
                 case 'limit':
-                    limit();
+                    limit()
+                        .then(deferred.resolve);
                     break;
 
                 case 'login':
-                    login(config.params[0], config.params[1]);
+                    login(config.params[0], config.params[1])
+                        .then(deferred.resolve);
                     break;
 
                 case 'logout':
                     github.removeCredentials();
+                    deferred.resolve();
                     break;
 
                 case 'search':
-                    // first parameter is project name, all other are search filters
-                    search(
-                        config.params[0],
-                        _.pick(config, 'in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars'),
-                        LOAD_MORE
-                    );
+                    search(config.params[0], filters, loadMore)
+                        .then(deferred.resolve);
                     break;
 
                 case 'list':
                 case 'show':
-                    showIssues(config, command, LOAD_MORE);
+                    showIssues(config, command, loadMore)
+                        .then(deferred.resolve);
                     break;
+
                 case 'mine':
-                    showMyIssues(
-                        _.pick(config, 'in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars'),
-                        LOAD_MORE
-                    );
+                    showMyIssues(filters, loadMore)
+                        .then(deferred.resolve);
                     break;
+
                 default:
                     console.log([
                         'Unknown command',
@@ -64,6 +70,8 @@
                     ].join('\n'));
 
             }
+
+            return deferred.promise;
 
         };
 
@@ -102,7 +110,7 @@
         // ******************************************
 
         function limit() {
-            github.rateLimit()
+            return github.rateLimit()
                 .then(function (rateLimits) {
                     _.each(rateLimits, function (value, name) {
                         displayStatus(name, value.remaining, value.limit, value.reset);
@@ -148,6 +156,8 @@
 
         function login(username, password) {
 
+            var deferred = Q.defer();
+
             // first logout, which ensures userconfig is writable
             github.removeCredentials();
 
@@ -160,6 +170,7 @@
                     github.login(credentials.username, credentials.password, tokenName)
                         .then(function (result) {
                             console.log(result);
+                            deferred.resolve();
                         })
                         .fail(function (error) {
                             console.log(error);
@@ -170,6 +181,8 @@
                     console.log('Capture credentials error');
                 });
 
+            return deferred.promise;
+
         }
 
 
@@ -179,6 +192,8 @@
 
         function search(repository, filters, answer) {
 
+            var deferred = Q.defer();
+
             if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
                 var g = helper.chalk.gray;
                 console.log(g('Warning, user not logged in, private repositories are not listed...'));
@@ -187,9 +202,12 @@
             github.searchRepository(repository, filters)
                 .then(function (response) {
                     searchSuccess(response);
-                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, answer || 'ask');
+                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, answer || 'ask')
+                        .then(deferred.resolve);
                 })
                 .fail(responseError);
+
+            return deferred.promise;
 
             function searchSuccess(response) {
 
@@ -212,6 +230,8 @@
 
         function showIssues(config, command, loadMore) {
 
+            var deferred = Q.defer();
+
             // unless disabled, assueme autodetect is true
             var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
             var filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
@@ -221,7 +241,8 @@
                 github.listIssues(repo.namespace, repo.id, filters)
                     .then(function (response) {
                         listIssuesSuccess(response);
-                        github.fetchNextPage(response.headers, listIssuesSuccess, responseError, null, loadMore);
+                        github.fetchNextPage(response.headers, listIssuesSuccess, responseError, null, loadMore)
+                            .then(deferred.resolve);
                     })
                     .fail(responseError);
 
@@ -235,21 +256,29 @@
                         // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
                         var templateOptions = _.pick(localConfig, 'dim');
                         console.log(issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)));
+                        deferred.resolve();
                     })
                     .fail(responseError);
 
             }
 
+            return deferred.promise;
+
         }
 
         function showMyIssues(filters, loadMore) {
 
+            var deferred = Q.defer();
+
             github.listPersonalIssues(filters)
                 .then(function (response) {
                     listIssuesSuccess(response);
-                    github.fetchNextPage(response.headers, listIssuesSuccess, responseError, null, loadMore);
+                    github.fetchNextPage(response.headers, listIssuesSuccess, responseError, null, loadMore)
+                        .then(deferred.resolve);
                 })
                 .fail(responseError);
+
+            return deferred.promise;
 
         }
 
