@@ -17,8 +17,12 @@
 
         var githubCli = function (config, command) {
 
-            var deferred = Q.defer();
+            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
+                var g = helper.chalk.gray;
+                console.log(g('Warning, user not logged in, private data is not listed...'));
+            }
 
+            var deferred = Q.defer();
             var loadMore = config.answer || 'ask';
 
             switch (command) {
@@ -39,27 +43,7 @@
                     break;
 
                 case 'search':
-                    // if --repo or -r specified, we're searching for a repository
-                    if(!!config.repo || !!config.r){
-                        search(config.repo || config.r, filters, loadMore)
-                            .then(deferred.resolve);
-                    }
-                    // if --issues or --i specified, we're searching for issues
-                    else if(!!config.issues || !!config.i){
-                        searchIssues(config.issues || config.i, config.sort, config.order, loadMore)
-                            .then(deferred.resolve);
-                    }else{
-                        console.log([
-                            'Unknown search type parameter',
-                            '',
-                            'You can set --r or --repo paremeters for respository search, or --i or --issues parameters for issues search',
-                            '',
-                            'Example:',
-                            '',
-                            '  issue github search --r chancejs',
-                            ''
-                        ].join('\n'));
-                    }
+                    search(config, loadMore);
                     break;
 
                 case 'list':
@@ -209,60 +193,50 @@
         // SEARCH
         // ******************************************
 
-        function search(repository, filters, answer) {
+        function search (config, loadMore) {
 
             var deferred = Q.defer();
 
-            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
-                var g = helper.chalk.gray;
-                console.log(g('Warning, user not logged in, private repositories are not listed...'));
+            // if --repo or -r specified, we're searching for a repository
+            if(!!config.repo || !!config.r){
+
+                github.searchRepository(config.repo || config.r, config.sort, config.order)
+                    .then(function (response) {
+                        searchSuccess(response);
+                        github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
+                            .then(deferred.resolve);
+                    })
+                    .fail(responseError);
+
+            }
+            // if --issues or --i specified, we're searching for issues
+            else if(!!config.issues || !!config.i){
+
+                github.searchIssues(config.issues || config.i, config.sort, config.order)
+                    .then(function (response) {
+                        searchIssuesSuccess(response);
+                        var g = helper.chalk.green;
+                        // display number of results after 1st page
+                        console.log('Total results: ' + g(response.data.total_count));
+                        github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
+                            .then(deferred.resolve)
+                            .fail(deferred.reject);
+                    })
+                    .fail(responseError);
+
+            }else{
+                console.log([
+                    'Unknown search type parameter',
+                    '',
+                    'You can set --r or --repo paremeters for respository search, or --i or --issues parameters for issues search',
+                    '',
+                    'Example:',
+                    '',
+                    '  issue github search --r chancejs',
+                    ''
+                ].join('\n'));
             }
 
-            github.searchRepository(repository, filters)
-                .then(function (response) {
-                    searchSuccess(response);
-                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, answer || 'ask')
-                        .then(deferred.resolve);
-                })
-                .fail(responseError);
-
-            return deferred.promise;
-
-            function searchSuccess(response) {
-
-                var result = response.data;
-                _.each(result.items, function (repo) {
-                    var red = helper.chalk.red;
-                    var grey = helper.chalk.grey;
-                    var name = repo.owner.login + ' ' + red(repo.name) + grey(' (' + repo.ssh_url + ')'); // jshint ignore:line
-                    console.log(name);
-                });
-                return response;
-            }
-
-        }
-
-
-        function searchIssues (searchTerm, sort, order, loadMore) {
-           var deferred = Q.defer();
-            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
-                var g = helper.chalk.gray;
-                console.log(g('Warning, user not logged in, private issues are not listed...'));
-            }
-
-            github.searchIssues(searchTerm, sort, order)
-                .then(function (response) {
-                    searchIssuesSuccess(response);
-                    var g = helper.chalk.green;
-                    // display number of results after 1st page
-                    console.log('Total results: ' + g(response.data.total_count));
-                    github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
-                        .then(deferred.resolve)
-                        .fail(deferred.reject);
-                })
-                .fail(responseError);
-
-            return deferred.promise;
         }
 
         // ******************************************
@@ -361,6 +335,18 @@
             var templateOptions = _.pick(localConfig, 'dim');
             console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
 
+        }
+
+        function searchSuccess(response) {
+
+            var result = response.data;
+            _.each(result.items, function (repo) {
+                var red = helper.chalk.red;
+                var grey = helper.chalk.grey;
+                var name = repo.owner.login + ' ' + red(repo.name) + grey(' (' + repo.ssh_url + ')'); // jshint ignore:line
+                console.log(name);
+            });
+            return response;
         }
 
         function searchIssuesSuccess(response) {

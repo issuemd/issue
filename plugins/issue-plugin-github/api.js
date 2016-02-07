@@ -28,12 +28,12 @@ module.exports = function () {
             getAuthTokens: getAuthTokens,
             rateLimit: rateLimit,
             revokeAuthToken: revokeAuthToken,
-            search: search,
             getIssues: getIssues,
             getIssue: getIssue,
             getIssueComments: getIssueComments,
             getIssueEvents: getIssueEvents,
             getPersonalIssues: getPersonalIssues,
+            searchRepositories: searchRepositories,
             searchIssues: searchIssues
         };
 
@@ -92,9 +92,19 @@ module.exports = function () {
 
         }
 
-        function search(project, filters) {
-            var url = '/search/repositories?q=' + (project || '');
-            return ajaxWrapper(url, null, filters);
+
+        // q   string  The search terms.
+        // sort    string  The sort field. Can be comments, created, or updated. Default: results are sorted by best match.
+        // order   string  The sort order if sort parameter is provided. One of asc or desc. Default: desc
+        function searchRepositories(q, sort, order) {
+            var url = '/search/repositories?q=' + (q || '');
+            if(_.contains(['comments', 'created', 'updated'], sort)){
+                url += '&sort=' + sort;
+            }
+            if(_.contains(['asc', 'desc'], order)){
+                url += '&order=' + order;
+            }
+            return ajaxWrapper(url);
         }
 
 

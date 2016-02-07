@@ -363,26 +363,19 @@
         // REPOSITORY SEARCH
         // ******************************************
 
-        function searchRepository(repository, filters) {
+        function searchRepository(searchTerm, sort, order) {
             var deferred = Q.defer();
 
-            if (!repository) {
-                deferred.reject({
-                    error: '',
-                    message: 'You must specifiy user/organization and repository name...'
-                });
-            } else {
-                api.search(repository, filters)
-                    .then(function (response) {
-                        deferred.resolve(response);
-                    })
-                    .fail(function (error) {
-                        deferred.reject({
-                            error: error.error,
-                            message: error.message
-                        });
+            api.searchRepositories(searchTerm, sort, order)
+                .then(function (response) {
+                    deferred.resolve(response);
+                })
+                .fail(function (error) {
+                    deferred.reject({
+                        error: error.error,
+                        message: error.message
                     });
-            }
+                });
 
             return deferred.promise;
         }
