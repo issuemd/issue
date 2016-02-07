@@ -141,6 +141,11 @@ module.exports = function () {
                 url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + config.plugins.github.authToken;
             }
 
+            // if Basic Auth is not present, check for existing access token
+            if (!/[?&]per_page=/.test(url)) {
+                url += (/\?/.test(url) ? '&' : '?') + 'per_page=100';
+            }
+
             if (options.method === 'GET' && body) {
                 _.each(body, function (value, key) {
                     url += (/\?/.test(url) ? '&' : '?') + key + '=' + value;

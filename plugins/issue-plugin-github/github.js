@@ -519,7 +519,7 @@
                 .then(function (response) {
 
                     onSuccess(response);
-                    fetchNextPage(response.headers, onSuccess, onError, onComplete, false);
+                    fetchNextPage(response.headers, onSuccess, onError, onComplete, localConfig.answer || 'ask');
 
                 });
 
@@ -548,7 +548,7 @@
                 .then(function (response) {
 
                     onSuccess(response);
-                    fetchNextPage(response.headers, onSuccess, onError, onComplete, false);
+                    fetchNextPage(response.headers, onSuccess, onError, onComplete, localConfig.answer || 'ask');
 
                 });
 
