@@ -92,34 +92,14 @@ module.exports = function () {
 
         }
 
-
-        // q   string  The search terms.
-        // sort    string  The sort field. Can be comments, created, or updated. Default: results are sorted by best match.
-        // order   string  The sort order if sort parameter is provided. One of asc or desc. Default: desc
-        function searchRepositories(q, sort, order) {
+        function searchRepositories(q, filters) {
             var url = '/search/repositories?q=' + (q || '');
-            if(_.contains(['comments', 'created', 'updated'], sort)){
-                url += '&sort=' + sort;
-            }
-            if(_.contains(['asc', 'desc'], order)){
-                url += '&order=' + order;
-            }
-            return ajaxWrapper(url);
+            return ajaxWrapper(url, null, filters);
         }
 
-
-        // q   string  The search terms.
-        // sort    string  The sort field. Can be comments, created, or updated. Default: results are sorted by best match.
-        // order   string  The sort order if sort parameter is provided. One of asc or desc. Default: desc
-        function searchIssues (q, sort, order) {
+        function searchIssues (q, filters) {
             var url = '/search/issues?q=' + (q || '');
-            if(_.contains(['comments', 'created', 'updated'], sort)){
-                url += '&sort=' + sort;
-            }
-            if(_.contains(['asc', 'desc'], order)){
-                url += '&order=' + order;
-            }
-            return ajaxWrapper(url);
+            return ajaxWrapper(url, null, filters);
         }
 
         function getIssues(user, repository, filters) {

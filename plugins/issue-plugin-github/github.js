@@ -363,10 +363,10 @@
         // REPOSITORY SEARCH
         // ******************************************
 
-        function searchRepository(searchTerm, sort, order) {
+        function searchRepository(searchTerm, filters) {
             var deferred = Q.defer();
 
-            api.searchRepositories(searchTerm, sort, order)
+            api.searchRepositories(searchTerm, filters)
                 .then(function (response) {
                     deferred.resolve(response);
                 })
@@ -386,10 +386,10 @@
         // ISSUES SEARCH
         // ******************************************
 
-        function searchIssues(searchTerm, sort, order) {
+        function searchIssues(searchTerm, filters) {
             var deferred = Q.defer();
 
-            api.searchIssues(searchTerm, sort, order)
+            api.searchIssues(searchTerm, filters)
                 .then(function (response) {
                     deferred.resolve(response);
                 })

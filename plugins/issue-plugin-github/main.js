@@ -13,7 +13,7 @@
 
         var localConfig = issueConfig(),
             templates = issueTemplates(helper.chalk),
-            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars']);
+            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']);
 
         var githubCli = function (config, command) {
 
@@ -43,7 +43,7 @@
                     break;
 
                 case 'search':
-                    search(config, loadMore);
+                    search(config, filters, loadMore);
                     break;
 
                 case 'list':
@@ -193,14 +193,14 @@
         // SEARCH
         // ******************************************
 
-        function search (config, loadMore) {
+        function search (config, filters, loadMore) {
 
             var deferred = Q.defer();
 
             // if --repo or -r specified, we're searching for a repository
             if(!!config.repo || !!config.r){
 
-                github.searchRepository(config.repo || config.r, config.sort, config.order)
+                github.searchRepository(config.repo || config.r, filters)
                     .then(function (response) {
                         searchSuccess(response);
                         github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
@@ -212,7 +212,7 @@
             // if --issues or --i specified, we're searching for issues
             else if(!!config.issues || !!config.i){
 
-                github.searchIssues(config.issues || config.i, config.sort, config.order)
+                github.searchIssues(config.issues || config.i, filters)
                     .then(function (response) {
                         searchIssuesSuccess(response);
                         var g = helper.chalk.green;
