@@ -45,7 +45,7 @@
   "dependencies": {
     "chalk": "^1.1.1",
     "ini": "^1.3.4",
-    "issuemd": "latest",
+    "issuemd": "^0.1.4",
     "mkdirp": "^0.5.1",
     "promptly": "^1.0.0",
     "q": "^1.4.1",
