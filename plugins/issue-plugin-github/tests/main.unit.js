@@ -26,7 +26,7 @@ describe('issue github', function () {
 
         // call github plugin function with mocked config and command
         github({
-            params: ['jquery'],
+            r: 'jquery',
             answer: 'no',
             plugins: {
                 github: {
@@ -54,7 +54,7 @@ describe('issue github', function () {
 
         // call github plugin function with mocked config and command
         github({
-            params: ['moment'],
+            r: 'moment',
             answer: 'no',
             plugins: {
                 github: {

@@ -196,7 +196,8 @@
             listPersonalIssues: listPersonalIssues,
             fetchIssue: fetchIssue,
             fetchIssueComments: fetchIssueComments,
-            fetchIssueEvents: fetchIssueEvents
+            fetchIssueEvents: fetchIssueEvents,
+            searchIssues: searchIssues
         };
 
 
@@ -370,26 +371,42 @@
         // REPOSITORY SEARCH
         // ******************************************
 
-        function searchRepository(repository, filters) {
+        function searchRepository(searchTerm, filters) {
             var deferred = Q.defer();
 
-            if (!repository) {
-                deferred.reject({
-                    error: '',
-                    message: 'You must specifiy user/organization and repository name...'
-                });
-            } else {
-                api.search(repository, filters)
-                    .then(function (response) {
-                        deferred.resolve(response);
-                    })
-                    .fail(function (error) {
-                        deferred.reject({
-                            error: error.error,
-                            message: error.message
-                        });
+            api.searchRepositories(searchTerm, filters)
+                .then(function (response) {
+                    deferred.resolve(response);
+                })
+                .fail(function (error) {
+                    deferred.reject({
+                        error: error.error,
+                        message: error.message
                     });
-            }
+                });
+
+            return deferred.promise;
+        }
+
+
+
+        // ******************************************
+        // ISSUES SEARCH
+        // ******************************************
+
+        function searchIssues(searchTerm, filters) {
+            var deferred = Q.defer();
+
+            api.searchIssues(searchTerm, filters)
+                .then(function (response) {
+                    deferred.resolve(response);
+                })
+                .fail(function (error) {
+                    deferred.reject({
+                        error: error.error,
+                        message: error.message
+                    });
+                });
 
             return deferred.promise;
         }

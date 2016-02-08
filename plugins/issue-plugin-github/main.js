@@ -13,12 +13,16 @@
 
         var localConfig = issueConfig(),
             templates = issueTemplates(helper.chalk),
-            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars']);
+            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']);
 
         var githubCli = function (config, command) {
 
-            var deferred = Q.defer();
+            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
+                var g = helper.chalk.gray;
+                console.log(g('Warning, user not logged in, private data is not listed...'));
+            }
 
+            var deferred = Q.defer();
             var loadMore = config.answer || 'ask';
 
             switch (command) {
@@ -39,8 +43,7 @@
                     break;
 
                 case 'search':
-                    search(config.params[0], filters, loadMore)
-                        .then(deferred.resolve);
+                    search(config, filters, loadMore);
                     break;
 
                 case 'list':
@@ -292,39 +295,55 @@
         // SEARCH
         // ******************************************
 
-        function search(repository, filters, answer) {
+        function search(config, filters, loadMore) {
 
             var deferred = Q.defer();
 
-            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
-                var g = helper.chalk.gray;
-                console.log(g('Warning, user not logged in, private repositories are not listed...'));
+            // if --repo or -r specified, we're searching for a repository
+            if (!!config.repo || !!config.r) {
+
+                github.searchRepository(config.repo || config.r, filters)
+                    .then(function (response) {
+                        searchSuccess(response);
+                        var g = helper.chalk.green;
+                        // display number of results after 1st page
+                        console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
+                        github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
+                            .then(deferred.resolve)
+                            .fail(deferred.reject);
+                    })
+                    .fail(responseError);
+
             }
+            // if --issues or --i specified, we're searching for issues
+            else if (!!config.issues || !!config.i) {
 
-            github.searchRepository(repository, filters)
-                .then(function (response) {
-                    searchSuccess(response);
-                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, answer || 'ask')
-                        .then(deferred.resolve);
-                })
-                .fail(responseError);
+                github.searchIssues(config.issues || config.i, filters)
+                    .then(function (response) {
+                        searchIssuesSuccess(response);
+                        var g = helper.chalk.green;
+                        // display number of results after 1st page
+                        console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
+                        github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
+                            .then(deferred.resolve)
+                            .fail(deferred.reject);
+                    })
+                    .fail(responseError);
 
-            return deferred.promise;
-
-            function searchSuccess(response) {
-
-                var result = response.data;
-                _.each(result.items, function (repo) {
-                    var red = helper.chalk.red;
-                    var grey = helper.chalk.grey;
-                    var name = repo.owner.login + ' ' + red(repo.name) + grey(' (' + repo.ssh_url + ')'); // jshint ignore:line
-                    console.log(name);
-                });
-                return response;
+            } else {
+                console.log([
+                    'Unknown search type parameter',
+                    '',
+                    'You can set --r or --repo paremeters for respository search, or --i or --issues parameters for issues search',
+                    '',
+                    'Example:',
+                    '',
+                    '  issue github search --r chancejs',
+                    ''
+                ].join('\n'));
             }
 
         }
-
 
         // ******************************************
         // ISSUES
@@ -420,6 +439,51 @@
             });
 
             var templateOptions = _.pick(localConfig, 'dim');
+            console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
+
+        }
+
+        function searchSuccess(response) {
+
+            var result = response.data;
+            _.each(result.items, function (repo) {
+                var red = helper.chalk.red;
+                var grey = helper.chalk.grey;
+                var name = repo.owner.login + ' ' + red(repo.name) + grey(' (' + repo.ssh_url + ')'); // jshint ignore:line
+                console.log(name);
+            });
+            return response;
+        }
+
+        function searchIssuesSuccess(response) {
+
+            var data = response.data.items;
+            var issues = issuemd();
+            var githubIssues = _.isArray(data) ? data : [data];
+
+            _.each(githubIssues, function (githubIssue) {
+
+                // should we introduce new template for search issues
+                // and capture different fields, adjusted to the template?
+                var issue = issuemd({})
+                    .attr({
+                        title: githubIssue.title,
+                        creator: helper.personFromParts({
+                            username: githubIssue.user.login
+                        }),
+                        created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
+                        body: githubIssue.body,
+                        id: githubIssue.number,
+                        assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
+                        status: githubIssue.state || ''
+                    });
+
+                issues.merge(issue);
+
+            });
+
+            var templateOptions = _.pick(localConfig, 'dim');
+
             console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
 
         }

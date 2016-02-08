@@ -28,13 +28,14 @@ module.exports = function () {
             getAuthTokens: getAuthTokens,
             rateLimit: rateLimit,
             revokeAuthToken: revokeAuthToken,
-            search: search,
             getIssues: getIssues,
             getIssue: getIssue,
             getIssuePullRequests: getIssuePullRequests,
             getIssueComments: getIssueComments,
             getIssueEvents: getIssueEvents,
-            getPersonalIssues: getPersonalIssues
+            getPersonalIssues: getPersonalIssues,
+            searchRepositories: searchRepositories,
+            searchIssues: searchIssues
         };
 
         function nextPage(url) {
@@ -92,8 +93,13 @@ module.exports = function () {
 
         }
 
-        function search(project, filters) {
-            var url = '/search/repositories?q=' + (project || '');
+        function searchRepositories(q, filters) {
+            var url = '/search/repositories?q=' + (q || '');
+            return ajaxWrapper(url, null, filters);
+        }
+
+        function searchIssues(q, filters) {
+            var url = '/search/issues?q=' + (q || '');
             return ajaxWrapper(url, null, filters);
         }
 
