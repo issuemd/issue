@@ -394,10 +394,11 @@
         // ISSUES SEARCH
         // ******************************************
 
-        function searchIssues(searchTerm, filters) {
+        function searchIssues(searchTerm, repo, filters) {
+
             var deferred = Q.defer();
 
-            api.searchIssues(searchTerm, filters)
+            api.searchIssues(searchTerm, repo, filters)
                 .then(function (response) {
                     deferred.resolve(response);
                 })
@@ -409,6 +410,7 @@
                 });
 
             return deferred.promise;
+
         }
 
 

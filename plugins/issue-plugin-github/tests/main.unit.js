@@ -26,17 +26,17 @@ describe('issue github', function () {
 
         // call github plugin function with mocked config and command
         github({
-            r: 'jquery',
+            params: ['jquery'],
             answer: 'no',
             plugins: {
                 github: {
                     enabled: true
                 }
             }
-        }, 'search').then(function () {
+        }, 'locate').then(function () {
 
             // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(30);
+            expect(console.log.calls.length).toBe(31);
 
             // should contain jquery/jquery repo in top result
             expect(!!console.log.calls[0].args[0].match('git@github.com:jquery/jquery.git')).toBe(true);
@@ -54,17 +54,17 @@ describe('issue github', function () {
 
         // call github plugin function with mocked config and command
         github({
-            r: 'moment',
+            params: ['moment'],
             answer: 'no',
             plugins: {
                 github: {
                     enabled: true
                 }
             }
-        }, 'search').then(function () {
+        }, 'locate').then(function () {
 
             // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(30);
+            expect(console.log.calls.length).toBe(31);
 
             // should contain moment/moment repo in top result
             expect(!!console.log.calls[0].args[0].match('git@github.com:moment/moment.git')).toBe(true);

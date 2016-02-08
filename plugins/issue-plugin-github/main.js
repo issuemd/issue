@@ -18,67 +18,66 @@
         var githubCli = function (config, command) {
 
             if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
-                var g = helper.chalk.gray;
-                console.log(g('Warning, user not logged in, private data is not listed...'));
+                console.log(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed'));
             }
 
             var deferred = Q.defer();
             var loadMore = config.answer || 'ask';
 
-            switch (command) {
-
-                case 'limit':
+            var commands = {
+                limit: function () {
                     limit()
                         .then(deferred.resolve);
-                    break;
-
-                case 'login':
+                },
+                login: function () {
                     login(config.params[0], config.params[1])
                         .then(deferred.resolve);
-                    break;
-
-                case 'logout':
+                },
+                logout: function () {
                     github.removeCredentials();
                     deferred.resolve();
-                    break;
-
-                case 'search':
-                    search(config, filters, loadMore);
-                    break;
-
-                case 'list':
-                case 'show':
+                },
+                locate: function () {
+                    locate(config, filters, loadMore)
+                        .then(deferred.resolve);
+                },
+                search: function () {
+                    search(config, filters, loadMore)
+                        .then(deferred.resolve);
+                },
+                show: function () {
                     showIssues(config, command, loadMore)
                         .then(deferred.resolve);
-                    break;
 
-                case 'mine':
+                },
+                mine: function () {
                     showMyIssues(filters, loadMore)
                         .then(deferred.resolve);
-                    break;
-
-                case 'export':
-
+                },
+                export: function () {
                     handleExport(config)
                         .then(deferred.resolve);
+                },
+            };
+            commands.list = commands.show;
 
-                    break;
-
-                default:
-                    console.log([
-                        'Unknown command',
-                        'Usage:',
-                        '',
-                        '  issue github list mine',
-                        '  issue github list --repo <namespace/project>',
-                        '  issue github show --repo <namespace/project> <id>',
-                        '',
-                        'Example:',
-                        '',
-                        '  issue github show --repo victorquinn/chancejs 207',
-                        ''
-                    ].join('\n'));
-
+            if (commands[command]) {
+                commands[command]();
+            } else {
+                console.log([
+                    'Unknown command',
+                    '',
+                    'Usage:',
+                    '',
+                    '  issue github list mine',
+                    '  issue github list --repo <namespace/project>',
+                    '  issue github show --repo <namespace/project> <id>',
+                    '',
+                    'Example:',
+                    '',
+                    '  issue github show --repo victorquinn/chancejs 207',
+                    ''
+                ].join('\n'));
             }
 
             return deferred.promise;
@@ -295,53 +294,44 @@
         // SEARCH
         // ******************************************
 
-        function search(config, filters, loadMore) {
+        function locate(config, filters, loadMore) {
 
             var deferred = Q.defer();
 
-            // if --repo or -r specified, we're searching for a repository
-            if (!!config.repo || !!config.r) {
+            github.searchRepository(config.params[0], filters)
+                .then(function (response) {
+                    searchSuccess(response);
+                    var g = helper.chalk.green;
+                    // display number of results after 1st page
+                    console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
+                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
+                        .then(deferred.resolve)
+                        .fail(deferred.reject);
+                })
+                .fail(responseError);
 
-                github.searchRepository(config.repo || config.r, filters)
-                    .then(function (response) {
-                        searchSuccess(response);
-                        var g = helper.chalk.green;
-                        // display number of results after 1st page
-                        console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
-                        github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
-                            .then(deferred.resolve)
-                            .fail(deferred.reject);
-                    })
-                    .fail(responseError);
+            return deferred.promise;
 
-            }
-            // if --issues or --i specified, we're searching for issues
-            else if (!!config.issues || !!config.i) {
+        }
 
-                github.searchIssues(config.issues || config.i, filters)
-                    .then(function (response) {
-                        searchIssuesSuccess(response);
-                        var g = helper.chalk.green;
-                        // display number of results after 1st page
-                        console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
-                        github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
-                            .then(deferred.resolve)
-                            .fail(deferred.reject);
-                    })
-                    .fail(responseError);
+        function search(config, filters, loadMore) {
 
-            } else {
-                console.log([
-                    'Unknown search type parameter',
-                    '',
-                    'You can set --r or --repo paremeters for respository search, or --i or --issues parameters for issues search',
-                    '',
-                    'Example:',
-                    '',
-                    '  issue github search --r chancejs',
-                    ''
-                ].join('\n'));
-            }
+            var deferred = Q.defer();
+            var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
+
+            github.searchIssues(config.params[0], repo, filters)
+                .then(function (response) {
+                    searchIssuesSuccess(response);
+                    var g = helper.chalk.green;
+                    // display number of results after 1st page
+                    console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
+                    github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
+                        .then(deferred.resolve)
+                        .fail(deferred.reject);
+                })
+                .fail(responseError);
+
+            return deferred.promise;
 
         }
 

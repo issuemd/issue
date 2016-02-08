@@ -98,8 +98,8 @@ module.exports = function () {
             return ajaxWrapper(url, null, filters);
         }
 
-        function searchIssues(q, filters) {
-            var url = '/search/issues?q=' + (q || '');
+        function searchIssues(q, repo, filters) {
+            var url = '/search/issues?q=' + (q || '') + (repo ? '+repo:' + repo.namespace + '/' + repo.id : '');
             return ajaxWrapper(url, null, filters);
         }
 
@@ -145,11 +145,6 @@ module.exports = function () {
             // if Basic Auth is not present, check for existing access token
             if (!/[?&]access_token=/.test(url) && (!options.headers || !options.headers.Authorization) && config.plugins && config.plugins.github && config.plugins.github.authToken) {
                 url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + config.plugins.github.authToken;
-            }
-
-            // if Basic Auth is not present, check for existing access token
-            if (!/[?&]per_page=/.test(url)) {
-                url += (/\?/.test(url) ? '&' : '?') + 'per_page=100';
             }
 
             if (options.method === 'GET' && body) {
