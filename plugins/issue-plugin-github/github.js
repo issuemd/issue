@@ -538,7 +538,7 @@
                 .then(function (response) {
 
                     onSuccess(response);
-                    fetchNextPage(response.headers, onSuccess, onError, onComplete, localConfig.answer || 'ask');
+                    fetchNextPage(response.headers, onSuccess, onError, onComplete, 'yes');
 
                 });
 
@@ -567,7 +567,7 @@
                 .then(function (response) {
 
                     onSuccess(response);
-                    fetchNextPage(response.headers, onSuccess, onError, onComplete, localConfig.answer || 'ask');
+                    fetchNextPage(response.headers, onSuccess, onError, onComplete, 'yes');
 
                 });
 
