@@ -11,11 +11,13 @@
             issuemd = require('issuemd');
 
         var issueTemplates = require('./issue-templates.js'),
+            config = issueConfig(),
             pluginDirs = [
-                path.join(__dirname, '..', 'plugins', path.sep),
-                path.join(__dirname, '..', '..', 'node_modules', path.sep)
-            ],
-            config = issueConfig();
+                path.join(__dirname, '..', 'plugins'),
+                path.join(__dirname, '..', '..')
+            ].concat(config['plugin-dir'] ? [config['plugin-dir']] : []).map(function (pluginDir) {
+                return path.resolve(pluginDir) + path.sep;
+            });
 
         var plugins = {
             init: require('./issue-init.js')(issueConfig)

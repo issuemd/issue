@@ -185,7 +185,7 @@
                         try {
                             localissue = issuemd(fs.readFileSync(filename, 'utf8'));
                             localdate = new Date(localissue.eq(0).updates().reduce(function (memo, event) {
-                                return event.type !== 'reference' ? event : memo;
+                                return event.type !== 'reference' ? event.modified : memo; // jshint ignore:line
                             }, localissue.attr('created')));
                         } catch (e) {
                             if (e.code !== 'ENOENT') {

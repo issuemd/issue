@@ -22,42 +22,13 @@
 
     var path = require('path'),
         fs = require('fs'),
-        _ = require('underscore');
+        _ = require('underscore'),
+        underscoreDeepExtend = require('underscore-deep-extend');
 
     var argv;
 
     _.mixin({
-        deepExtend: function (obj) {
-            var parentRE = /#{\s*?_\s*?}/,
-                slice = Array.prototype.slice;
-
-            _.each(slice.call(arguments, 1), function (source) { // jshint maxcomplexity:16
-                for (var prop in source) {
-                    if (_.isUndefined(obj[prop]) || _.isFunction(obj[prop]) || _.isNull(source[prop]) || _.isDate(source[prop])) {
-                        obj[prop] = source[prop];
-                    } else if (_.isString(source[prop]) && parentRE.test(source[prop])) {
-                        if (_.isString(obj[prop])) {
-                            obj[prop] = source[prop].replace(parentRE, obj[prop]);
-                        }
-                    } else if (_.isArray(obj[prop]) || _.isArray(source[prop])) {
-                        if (!_.isArray(obj[prop]) || !_.isArray(source[prop])) {
-                            throw new Error('Trying to combine an array with a non-array (' + prop + ')');
-                        } else {
-                            obj[prop] = _.reject(_.deepExtend(_.clone(obj[prop]), source[prop]), _.isNull);
-                        }
-                    } else if (_.isObject(obj[prop]) || _.isObject(source[prop])) {
-                        if (!_.isObject(obj[prop]) || !_.isObject(source[prop])) {
-                            throw new Error('Trying to combine an object with a non-object (' + prop + ')');
-                        } else {
-                            obj[prop] = _.deepExtend(_.clone(obj[prop]), source[prop]);
-                        }
-                    } else {
-                        obj[prop] = source[prop];
-                    }
-                }
-            });
-            return obj;
-        }
+        deepExtend: underscoreDeepExtend(_)
     });
 
     module.exports = function () {
