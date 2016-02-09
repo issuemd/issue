@@ -92,9 +92,11 @@
                 },
                 // synthesised events
                 pull_request: function () { // jshint ignore:line
+                    update.type = 'pull-request';
                     return 'pull request opened';
                 },
                 update: function () { // jshint ignore:line
+                    update.type = 'edit';
                     return 'update to issue';
                 }
             };
@@ -108,7 +110,7 @@
 
         };
 
-        issuemd.fn.addFromGithubJson = function (gitIssue) { // jshint maxcomplexity:15
+        issuemd.fn.addFromGithubJson = function (gitIssue) {
 
             var issue = issuemd({
 
@@ -125,51 +127,43 @@
 
             // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
             var repoName = gitIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
+
             if (repoName) {
                 attr.project = repoName;
             }
 
-            if (gitIssue.state) {
-                attr.status = gitIssue.state;
-            }
-
-            if (gitIssue.number) {
-                attr.number = gitIssue.number;
-            }
-
-            if (gitIssue.locked) {
-                attr.locked = gitIssue.locked;
-            }
-
-            if (gitIssue.assignee) {
-                attr.assignee = gitIssue.assignee.login;
-            }
-
-            if (gitIssue.updated_at) { // jshint ignore:line
-                attr.updated = helper.dateStringToIso(gitIssue.updated_at); // jshint ignore:line
-            }
-
-            if (typeof gitIssue.pull_request !== 'undefined') { // jshint ignore:line
-                attr.pull_request_url = gitIssue.pull_request.url; // jshint ignore:line
-            }
-
-            if (typeof gitIssue.milestone !== 'undefined' && gitIssue.milestone !== null) {
-                attr.milestone = gitIssue.milestone.title;
-            }
-
-            // closed attribute added only if defined
-            if (typeof gitIssue.closed !== 'undefined') {
-                attr.closed = helper.dateStringToIso(gitIssue.closed_at); // jshint ignore:line
-            }
-
-            // labels get concatenated to comma delimited string
-            if (gitIssue.labels.length > 0) {
-                var labelArray = gitIssue.labels.map(function (label) {
+            var attributes = {
+                status: 'state',
+                number: 'number',
+                locked: 'locked',
+                assignee: function () {
+                    return gitIssue.assignee && gitIssue.assignee.login;
+                },
+                updated: function () {
+                    return helper.dateStringToIso(gitIssue.updated_at); // jshint ignore:line
+                },
+                pull_request_url: function () { // jshint ignore:line
+                    return gitIssue.pull_request && gitIssue.pull_request.url; // jshint ignore:line
+                },
+                milestone: function () {
+                    return gitIssue.milestone && gitIssue.milestone.title;
+                },
+                closed: function () {
+                    return gitIssue.closed && helper.dateStringToIso(gitIssue.closed_at); // jshint ignore:line
+                },
+                labels: function () {
+                    // labels get concatenated to comma delimited string
+                    return gitIssue.labels.length > 0 && gitIssue.labels.map(function (label) {
                         return label.name;
-                    })
-                    .toString();
+                    }).join(', ');
+                }
+            };
 
-                attr.labels = labelArray;
+            for (var i in attributes) {
+                var value = typeof attributes[i] === 'function' ? attributes[i]() : gitIssue[attributes[i]];
+                if (!!value) {
+                    attr[i] = value;
+                }
             }
 
             issue.attr(attr);
@@ -445,69 +439,62 @@
         }
 
         function getCommentsAndEvents(user, repository, number, issue, deferred) {
+
             // fetch all comments and add them to the queue
             fetchIssueComments(user, repository, number)
                 .then(function (comments) {
                     issue.comments = comments;
-                    fetchIssueEvents(user, repository, number)
-                        .then(function (events) { // jshint maxcomplexity:15
-                            issue.events = events;
-                            if (!!issue.pull_request) { // jshint ignore:line
-                                fetchIssuePullRequests(user, repository, number).then(function (response) {
-                                    if (response.data.updated_at) { // jshint ignore:line
-                                        issue.events.push({
-                                            event: 'pull_request',
-                                            actor: {
-                                                login: response.data.user.login
-                                            },
-                                            created_at: response.data.updated_at // jshint ignore:line
-                                        });
-                                    }
-                                    deferred.resolve(issue);
+                    return fetchIssueEvents(user, repository, number).then(function (events) {
+                        issue.events = events;
+                    });
+                })
+                .then(handlePullRequests);
+
+            function handlePullRequests() {
+                if (!!issue.pull_request) { // jshint ignore:line
+                    fetchIssuePullRequests(user, repository, number)
+                        .then(function (response) {
+                            if (response.data.updated_at) { // jshint ignore:line
+                                issue.events.push({
+                                    event: 'pull_request',
+                                    actor: {
+                                        login: response.data.user.login
+                                    },
+                                    created_at: response.data.updated_at // jshint ignore:line
                                 });
-                            } else {
-                                var lastKnownUpdate;
-                                if (issue.comments.length) {
-                                    lastKnownUpdate = issue.comments[issue.comments.length - 1].updated_at; // jshint ignore:line
-                                }
-                                var dereferencedEvents = issue.events.reduce(function (memo, item) {
-                                    if (item.event !== 'referenced') {
-                                        memo.push(item);
-                                    }
-                                    return memo;
-                                }, []);
-                                if (dereferencedEvents.length) {
-                                    var eventUpdate = dereferencedEvents[dereferencedEvents.length - 1].created_at; // jshint ignore:line
-                                    if (new Date(eventUpdate) > new Date(lastKnownUpdate)) {
-                                        lastKnownUpdate = eventUpdate;
-                                    }
-                                }
-                                if (!!lastKnownUpdate || (!issue.comments.length && !issue.events.length)) { // jshint ignore:line
-                                    var bestGuess;
-                                    if (!!lastKnownUpdate && new Date(lastKnownUpdate) > new Date(issue.updated_at)) { // jshint ignore:line
-                                        bestGuess = lastKnownUpdate;
-                                    } else if (issue.updated_at && issue.created_at !== issue.updated_at) { // jshint ignore:line
-                                        if (!lastKnownUpdate || new Date(lastKnownUpdate) < new Date(issue.updated_at)) { // jshint ignore:line
-                                            bestGuess = issue.updated_at; // jshint ignore:line
-                                        }
-                                    } else if (!!lastKnownUpdate && new Date(lastKnownUpdate) < new Date(issue.updated_at)) { // jshint ignore:line
-                                        bestGuess = issue.updated_at; // jshint ignore:line
-                                    }
-                                    var newevent = {
-                                        event: 'update',
-                                        actor: {
-                                            login: issue.user.login
-                                        },
-                                        created_at: bestGuess // jshint ignore:line
-                                    };
-                                    if (!!bestGuess) {
-                                        issue.events.push(newevent);
-                                    }
-                                }
-                                deferred.resolve(issue);
                             }
+                            deferred.resolve(issue);
                         });
-                });
+                } else {
+
+                    var lastCommentOrEventUpdate = issue.events.reduce(function (memo, item) {
+                        return item.event !== 'referenced' && new Date(item.created_at) > new Date(memo) ? item.created_at : memo; // jshint ignore:line
+                    }, issue.comments.length && issue.comments[issue.comments.length - 1].updated_at); // jshint ignore:line
+
+                    var calculatedUpdateTime;
+
+                    if (!lastCommentOrEventUpdate && issue.created_at !== issue.updated_at) { // jshint ignore:line
+                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                    } else if (!!lastCommentOrEventUpdate && new Date(issue.updated_at) > new Date(lastCommentOrEventUpdate)) { // jshint ignore:line
+                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                    }
+
+                    if (!!calculatedUpdateTime) { // jshint ignore:line
+                        var newevent = {
+                            event: 'update',
+                            actor: {
+                                login: issue.user.login
+                            },
+                            created_at: calculatedUpdateTime // jshint ignore:line
+                        };
+                        issue.events.push(newevent);
+                    }
+
+                    deferred.resolve(issue);
+
+                }
+            }
+
         }
 
         function fetchIssue(user, repository, number) {

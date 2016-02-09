@@ -51,6 +51,7 @@
     "q": "^1.4.1",
     "request": "^2.67.0",
     "underscore": "~1.8.2",
+    "underscore-deep-extend": "0.0.5",
     "yargs": "^3.31.0"
   },
   "devDependencies": {
