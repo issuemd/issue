@@ -310,11 +310,14 @@
 
             github.searchRepository(config.params[0], filters)
                 .then(function (response) {
-                    searchSuccess(response);
+                    locateSuccess(response);
                     var g = helper.chalk.green;
+                    var s = helper.chalk.grey;
                     // display number of results after 1st page
-                    console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
-                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
+                    if(response.data.items.length) {
+                        console.log(s('Total results: ') + g(response.data.total_count) + '\n' + s('hint:') + ' git clone ' + response.data.items[0].ssh_url); // jshint ignore:line
+                    }
+                    github.fetchNextPage(response.headers, locateSuccess, responseError, null, loadMore || 'ask')
                         .then(deferred.resolve)
                         .fail(deferred.reject);
                 })
@@ -443,13 +446,13 @@
 
         }
 
-        function searchSuccess(response) {
+        function locateSuccess(response) {
 
             var result = response.data;
             _.each(result.items, function (repo) {
                 var red = helper.chalk.red;
                 var grey = helper.chalk.grey;
-                var name = repo.owner.login + ' ' + red(repo.name) + grey(' (' + repo.ssh_url + ')'); // jshint ignore:line
+                var name = repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
                 console.log(name);
             });
             return response;
