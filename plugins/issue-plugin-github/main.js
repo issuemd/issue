@@ -85,19 +85,29 @@
         };
 
         githubCli.helptext = [
-            'Search for repos, list issues for repo, and display issue details...',
+            'Locate github repos, search for, list, export and display details for issues...',
             '',
-            '  issue github search <search-term>                  - search github for repo',
-            '  issue github show --repo <namespace/project>       - list issues for repo',
-            '  issue github show --repo <namespace/project> <id>  - display specified issue',
-            '  issue github limit                                 - display api rate limit',
-            '  issue github login                                 - authenticate with github',
+            '  issue github locate <search-term>                      - locate github repo',
+            '',
+            '  issue github list --repo <user/name>                   - list issues for repo',
+            '  issue github search <search-term> --repo <user/name>   - search issues in repo',
+            '  issue github show --repo <user/name> <id>              - display specified issue',
+            '',
+            '  issue github export --repo <user/name> --dest <export-path> --answer <yes-no>',
+            '                                                         - display specified issue',
+            '',
+            '  issue github limit                                     - display api rate limit',
+            '',
+            '  issue github login                                     - authenticate with github',
+            '  issue github logout                                    - remove github credentials',
             '',
             'e.g.',
             '',
-            '  issue github search chancejs',
-            '  issue github show --repo victorquinn/chancejs',
+            '  issue github locate chancejs',
+            '  issue github list --repo victorquinn/chancejs',
+            '  issue github search --repo victorquinn/chancejs Ooof',
             '  issue github show --repo victorquinn/chancejs 207',
+            '  issue github export --dest issues --answer yes --repo victorquinn/chancejs Ooof',
             '',
             '  issue github limit',
             '  issue github login',
@@ -300,11 +310,14 @@
 
             github.searchRepository(config.params[0], filters)
                 .then(function (response) {
-                    searchSuccess(response);
+                    locateSuccess(response);
                     var g = helper.chalk.green;
+                    var s = helper.chalk.grey;
                     // display number of results after 1st page
-                    console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
-                    github.fetchNextPage(response.headers, searchSuccess, responseError, null, loadMore || 'ask')
+                    if (response.data.items.length) {
+                        console.log(s('Total results: ') + g(response.data.total_count) + '\n' + s('hint:') + ' git clone ' + response.data.items[0].ssh_url); // jshint ignore:line
+                    }
+                    github.fetchNextPage(response.headers, locateSuccess, responseError, null, loadMore || 'ask')
                         .then(deferred.resolve)
                         .fail(deferred.reject);
                 })
@@ -433,13 +446,13 @@
 
         }
 
-        function searchSuccess(response) {
+        function locateSuccess(response) {
 
             var result = response.data;
             _.each(result.items, function (repo) {
                 var red = helper.chalk.red;
                 var grey = helper.chalk.grey;
-                var name = repo.owner.login + ' ' + red(repo.name) + grey(' (' + repo.ssh_url + ')'); // jshint ignore:line
+                var name = repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
                 console.log(name);
             });
             return response;

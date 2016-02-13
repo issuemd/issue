@@ -147,6 +147,10 @@ module.exports = function () {
                 url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + config.plugins.github.authToken;
             }
 
+            if (config['api-per-page'] && !/[?&]per_page=/.test(url)) {
+                url += (/\?/.test(url) ? '&' : '?') + 'per_page=' + config['api-per-page'];
+            }
+
             if (options.method === 'GET' && body) {
                 _.each(body, function (value, key) {
                     url += (/\?/.test(url) ? '&' : '?') + key + '=' + value;

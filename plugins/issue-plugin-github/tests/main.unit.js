@@ -39,7 +39,7 @@ describe('issue github', function () {
             expect(console.log.calls.length).toBe(31);
 
             // should contain jquery/jquery repo in top result
-            expect(!!console.log.calls[0].args[0].match('git@github.com:jquery/jquery.git')).toBe(true);
+            expect(!!console.log.calls[0].args[0].match(/^jquery/)).toBe(true);
 
             done();
 
@@ -67,7 +67,7 @@ describe('issue github', function () {
             expect(console.log.calls.length).toBe(31);
 
             // should contain moment/moment repo in top result
-            expect(!!console.log.calls[0].args[0].match('git@github.com:moment/moment.git')).toBe(true);
+            expect(!!console.log.calls[0].args[0].match(/^moment/)).toBe(true);
 
             done();
 
