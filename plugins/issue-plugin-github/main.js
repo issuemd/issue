@@ -26,8 +26,7 @@
 
             var commands = {
                 limit: function () {
-                    limit()
-                        .then(deferred.resolve);
+                    limit().then(deferred.resolve);
                 },
                 login: function () {
                     login(config.params[0], config.params[1])
@@ -224,41 +223,43 @@
         }
 
         function limit() {
+
             return github.rateLimit()
                 .then(function (rateLimits) {
-                    _.each(rateLimits, function (value, name) {
-                        displayStatus(name, value.remaining, value.limit, value.reset);
-                    });
+                    return { stdout: _.map(rateLimits, function (value, name) {
+                        return buildStatus(name, value.remaining, value.limit, value.reset);
+                    }) };
                 })
                 .fail(responseError);
-        }
 
-        function displayStatus(name, remaining, limit, reset) {
-            var w = helper.chalk.white;
-            var g = helper.chalk.green;
-            console.log(w(name + ' requests: ') + colorLimit(remaining, limit) + w('/' + limit + ', resets in: ') + g(getMinutes(reset)) + w(' mins'));
-        }
-
-        function colorLimit(value, limit) {
-
-            var color;
-
-            var currentState = value / limit;
-
-            if (currentState < 0.33) {
-                color = helper.chalk.red;
-            } else if (currentState < 0.66) {
-                color = helper.chalk.yellow;
-            } else {
-                color = helper.chalk.green;
+            function buildStatus(name, remaining, limit, reset) {
+                var w = helper.chalk.white;
+                var g = helper.chalk.green;
+                return w(name + ' requests: ') + colorLimit(remaining, limit) + w('/' + limit + ', resets in: ') + g(getMinutes(reset)) + w(' mins');
             }
 
-            return color(value);
+            function colorLimit(value, limit) {
 
-        }
+                var color;
 
-        function getMinutes(date) {
-            return Math.ceil((date * 1000 - new Date()) / 1000 / 60);
+                var currentState = value / limit;
+
+                if (currentState < 0.33) {
+                    color = helper.chalk.red;
+                } else if (currentState < 0.66) {
+                    color = helper.chalk.yellow;
+                } else {
+                    color = helper.chalk.green;
+                }
+
+                return color(value);
+
+            }
+
+            function getMinutes(date) {
+                return Math.ceil((date * 1000 - new Date()) / 1000 / 60);
+            }
+
         }
 
 

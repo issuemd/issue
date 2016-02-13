@@ -6,4 +6,11 @@ var path = require('path');
 var fs = require('fs');
 var src = path.join(path.dirname(fs.realpathSync(__filename)), '../src');
 
-require(src + '/issue-cli.js').run(process.argv);
+var promise = require(src + '/issue-cli.js').run(process.argv);
+
+// TODO: remove condition - throw error if not then-able
+if(promise && promise.then){
+  promise.then(function(result){
+    console.log(result.stdout.join('\n'));
+  });
+}

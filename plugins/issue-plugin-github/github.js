@@ -183,7 +183,7 @@
             generateTokenName: generateTokenName,
             writeGithubToken: writeGithubToken,
             login: login,
-            searchRepository: searchRepository,
+            searchRepository: api.searchRepositories,
             fetchNextPage: fetchNextPage,
             autoDetectRepo: autoDetectRepo,
             listIssues: listIssues,
@@ -348,29 +348,6 @@
                             });
                         });
 
-                })
-                .fail(function (error) {
-                    deferred.reject({
-                        error: error.error,
-                        message: error.message
-                    });
-                });
-
-            return deferred.promise;
-        }
-
-
-
-        // ******************************************
-        // REPOSITORY SEARCH
-        // ******************************************
-
-        function searchRepository(searchTerm, filters) {
-            var deferred = Q.defer();
-
-            api.searchRepositories(searchTerm, filters)
-                .then(function (response) {
-                    deferred.resolve(response);
                 })
                 .fail(function (error) {
                     deferred.reject({
