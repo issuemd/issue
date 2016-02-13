@@ -77,6 +77,7 @@
 
         function init(argvIn) {
             argv = argvIn;
+            internalConfig = false;
             return config;
         }
 
