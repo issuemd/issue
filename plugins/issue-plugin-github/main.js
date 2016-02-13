@@ -314,7 +314,7 @@
                     var g = helper.chalk.green;
                     var s = helper.chalk.grey;
                     // display number of results after 1st page
-                    if(response.data.items.length) {
+                    if (response.data.items.length) {
                         console.log(s('Total results: ') + g(response.data.total_count) + '\n' + s('hint:') + ' git clone ' + response.data.items[0].ssh_url); // jshint ignore:line
                     }
                     github.fetchNextPage(response.headers, locateSuccess, responseError, null, loadMore || 'ask')
