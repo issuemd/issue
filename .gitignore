@@ -3,7 +3,6 @@ issues/
 reports/
 .DS_Store
 .idea
-.issuerc
 node_modules
 bower_components
 npm-debug.log
