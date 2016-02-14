@@ -13,12 +13,13 @@
 
         var localConfig = issueConfig(),
             templates = issueTemplates(helper.chalk),
-            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']);
+            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']),
+            stderr = [];
 
         var githubCli = function (config, command) {
 
             if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
-                console.log(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed'));
+                stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
             }
 
             var deferred = Q.defer();
@@ -53,7 +54,7 @@
             if (commands[command]) {
                 commands[command]();
             } else {
-                console.log([
+                deferred.resolve({stdout:[
                     'Unknown command',
                     '',
                     'Usage:',
@@ -66,7 +67,7 @@
                     '',
                     '  issue github show --repo victorquinn/chancejs 207',
                     ''
-                ].join('\n'));
+                ]});
             }
 
             return deferred.promise;
@@ -220,6 +221,7 @@
             return github.rateLimit()
                 .then(function (rateLimits) {
                     return {
+                        stderr: stderr,
                         stdout: _.map(rateLimits, function (value, name) {
                             return w(name + ' requests: ') + colorLimit(value.remaining, value.limit) + w('/' + value.limit + ', resets in: ') + g(getMinutes(value.reset)) + w(' mins');
                         }).join('\n')
@@ -309,6 +311,7 @@
             }).join('\n');
 
             return {
+                stderr: stderr,
                 stdout: stdout,
                 next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(locateSuccess);
@@ -354,6 +357,7 @@
             stdout += 'Total results: ' + g(response.data.total_count); // jshint ignore:line
 
             return {
+                stderr: stderr,
                 stdout: stdout,
                 next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(searchSuccess);
@@ -389,6 +393,7 @@
                 pages = github.nextPageUrl(response);
 
             return {
+                stderr: stderr,
                 stdout: issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)),
                 next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(showSuccess);
@@ -424,6 +429,7 @@
             });
 
             return {
+                stderr: stderr,
                 stdout: issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(_.pick(localConfig, 'dim'))),
                 next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(showSuccess);
