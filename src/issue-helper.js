@@ -123,13 +123,13 @@
                 if (helper.yesno(value)) {
                     if (typeof ifYes === 'string') {
                         console.log(ifYes);
-                    } else {
+                    } else if (typeof ifYes === 'function') {
                         ifYes();
                     }
                 } else {
                     if (typeof ifNo === 'string') {
                         console.log(helper.chalk.red('aborted config change'));
-                    } else {
+                    } else if (typeof ifNo === 'function') {
                         ifNo();
                     }
                 }

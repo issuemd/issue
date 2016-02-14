@@ -184,7 +184,9 @@
             writeGithubToken: writeGithubToken,
             login: login,
             searchRepository: api.searchRepositories,
+            // TODO: remove fetchNextPage function
             fetchNextPage: fetchNextPage,
+            nextPage: nextPage,
             autoDetectRepo: autoDetectRepo,
             listIssues: listIssues,
             listPersonalIssues: listPersonalIssues,
@@ -193,8 +195,6 @@
             fetchIssueEvents: fetchIssueEvents,
             searchIssues: searchIssues
         };
-
-
 
         // ******************************************
         // RATE LIMIT
@@ -557,6 +557,20 @@
         // ******************************************
         // HELPERS
         // ******************************************
+
+        function nextPage(response) {
+            var urls = {};
+            if (response.headers && response.headers.link) {
+                // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
+                response.headers.link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, function (_, url, page, name) {
+                    urls[name] = {
+                        url: url,
+                        page: page * 1
+                    };
+                });
+            }
+            return urls.next && api.nextPage(urls.next.url);
+        }
 
         // recursive function to handle github pagination
         function fetchNextPage(headers, onPageSuccess, onPageError, onComplete, promptAnswer) {

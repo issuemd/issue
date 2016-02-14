@@ -37,8 +37,7 @@
                     deferred.resolve();
                 },
                 locate: function () {
-                    locate(config, filters, loadMore)
-                        .then(deferred.resolve);
+                    locate(config, filters, loadMore).then(deferred.resolve);
                 },
                 search: function () {
                     search(config, filters, loadMore)
@@ -224,19 +223,17 @@
 
         function limit() {
 
+            var w = helper.chalk.white;
+            var g = helper.chalk.green;
+
             return github.rateLimit()
                 .then(function (rateLimits) {
-                    return { stdout: _.map(rateLimits, function (value, name) {
-                        return buildStatus(name, value.remaining, value.limit, value.reset);
-                    }) };
-                })
-                .fail(responseError);
-
-            function buildStatus(name, remaining, limit, reset) {
-                var w = helper.chalk.white;
-                var g = helper.chalk.green;
-                return w(name + ' requests: ') + colorLimit(remaining, limit) + w('/' + limit + ', resets in: ') + g(getMinutes(reset)) + w(' mins');
-            }
+                    return {
+                        stdout: _.map(rateLimits, function (value, name) {
+                            return w(name + ' requests: ') + colorLimit(value.remaining, value.limit) + w('/' + value.limit + ', resets in: ') + g(getMinutes(value.reset)) + w(' mins');
+                        }).join('\n')
+                    };
+                });
 
             function colorLimit(value, limit) {
 
@@ -305,26 +302,26 @@
         // SEARCH
         // ******************************************
 
-        function locate(config, filters, loadMore) {
+        function locate(config, filters) {
 
-            var deferred = Q.defer();
+            return github.searchRepository(config.params[0], filters).then(locateSuccess);
 
-            github.searchRepository(config.params[0], filters)
-                .then(function (response) {
-                    locateSuccess(response);
-                    var g = helper.chalk.green;
-                    var s = helper.chalk.grey;
-                    // display number of results after 1st page
-                    if (response.data.items.length) {
-                        console.log(s('Total results: ') + g(response.data.total_count) + '\n' + s('hint:') + ' git clone ' + response.data.items[0].ssh_url); // jshint ignore:line
-                    }
-                    github.fetchNextPage(response.headers, locateSuccess, responseError, null, loadMore || 'ask')
-                        .then(deferred.resolve)
-                        .fail(deferred.reject);
-                })
-                .fail(responseError);
+        }
 
-            return deferred.promise;
+        function locateSuccess(response) {
+
+            var result = response.data;
+            var red = helper.chalk.red;
+            var grey = helper.chalk.grey;
+
+            return {
+                stdout: _.map(result.items, function (repo) {
+                    return repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
+                }).join('\n'),
+                next: function () {
+                    return github.nextPage(response).then(locateSuccess);
+                }
+            };
 
         }
 
@@ -445,18 +442,6 @@
             var templateOptions = _.pick(localConfig, 'dim');
             console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
 
-        }
-
-        function locateSuccess(response) {
-
-            var result = response.data;
-            _.each(result.items, function (repo) {
-                var red = helper.chalk.red;
-                var grey = helper.chalk.grey;
-                var name = repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
-                console.log(name);
-            });
-            return response;
         }
 
         function searchIssuesSuccess(response) {

@@ -2,7 +2,9 @@
 
 'use strict';
 
-describe('issue github', function () {
+describe('issue github', function() {
+
+    var _ = require('underscore');
 
     // mock the config function to be passed to github plugin
     var rootpath = '../../../',
@@ -12,70 +14,39 @@ describe('issue github', function () {
         issueTemplates = require(rootpath + 'src/issue-templates.js'),
         github = require('../main.js')(pluginHelper.mockConfig, pluginHelper.issueHelper, issuemd, issueTemplates);
 
-    it('should load as function', function () {
+    it('should load as function', function() {
 
         expect(typeof github).toBe('function');
 
     });
 
-    // async test uses `done`
-    it('should search for specified term (jquery)', function (done) {
+    _.each(['jquery', 'moment'], function(item) {
 
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
+        it('should search for another specified term (' + item + ')', function(done) {
 
-        // call github plugin function with mocked config and command
-        github({
-            params: ['jquery'],
-            answer: 'no',
-            plugins: {
-                github: {
-                    enabled: true
+            // call github plugin function with mocked config and command
+            github({
+                params: [item],
+                answer: 'no',
+                plugins: {
+                    github: {
+                        enabled: true
+                    }
                 }
-            }
-        }, 'locate').then(function () {
+            }, 'locate').then(function(result) {
 
-            // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(31);
+                // should contain item namespace in top result
+                expect(new RegExp('^' + item).test(result.stdout)).toBe(true);
 
-            // should contain jquery/jquery repo in top result
-            expect(!!console.log.calls[0].args[0].match(/^jquery/)).toBe(true);
+                done();
 
-            done();
+            });
 
         });
 
     });
 
-    it('should search for another specified term (moment)', function (done) {
-
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
-
-        // call github plugin function with mocked config and command
-        github({
-            params: ['moment'],
-            answer: 'no',
-            plugins: {
-                github: {
-                    enabled: true
-                }
-            }
-        }, 'locate').then(function () {
-
-            // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(31);
-
-            // should contain moment/moment repo in top result
-            expect(!!console.log.calls[0].args[0].match(/^moment/)).toBe(true);
-
-            done();
-
-        });
-
-    });
-
-    it('should show results summary (chance.js)', function (done) {
+    it('should show results summary (chance.js)', function(done) {
 
         // create spy on the console.log function used to output search results
         console.log = jasmine.createSpy('log');
@@ -90,7 +61,7 @@ describe('issue github', function () {
                     enabled: true
                 }
             }
-        }, 'show').then(function () {
+        }, 'show').then(function() {
 
             // the list of console logs should be 30 long by now - in any order
             expect(console.log.calls.length).toBe(1);
@@ -104,7 +75,7 @@ describe('issue github', function () {
 
     });
 
-    it('should show paginated results summary (chance.js)', function (done) {
+    it('should show paginated results summary (chance.js)', function(done) {
 
         // create spy on the console.log function used to output search results
         console.log = jasmine.createSpy('log');
@@ -119,7 +90,7 @@ describe('issue github', function () {
                     enabled: true
                 }
             }
-        }, 'show').then(function () {
+        }, 'show').then(function() {
 
             // should have two calls to console.log, one for each summary table
             // the second table should be shorter than a full length summary

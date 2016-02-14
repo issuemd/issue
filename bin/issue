@@ -6,11 +6,26 @@ var path = require('path');
 var fs = require('fs');
 var src = path.join(path.dirname(fs.realpathSync(__filename)), '../src');
 
-var promise = require(src + '/issue-cli.js').run(process.argv);
+// TODO: figure out best way to require dependencies
+var config = require(src + '/issue-config.js').init(process.argv)();
+var helper = require(src + '/issue-helper.js')(config.tech);
 
-// TODO: remove condition - throw error if not then-able
-if(promise && promise.then){
-  promise.then(function(result){
-    console.log(result.stdout.join('\n'));
-  });
+resultHandler(require(src + '/issue-cli.js').run(process.argv));
+
+function resultHandler(promise) {
+
+    // TODO: remove condition - throw error if not then-able
+    promise && promise.then && promise.then(function (result) {
+        console.log(result.stdout);
+        if (result.next) {
+            if (!config.answer || config.answer === 'ask') {
+                helper.promptYesNo('Load more results? [yN]', function () {
+                    resultHandler(result.next());
+                });
+            } else if (!!config.answer && helper.yesno(config.answer)) {
+                resultHandler(result.next());
+            }
+        }
+    });
+
 }
