@@ -29,32 +29,26 @@
                     limit().then(deferred.resolve);
                 },
                 login: function () {
-                    login(config.params[0], config.params[1])
-                        .then(deferred.resolve);
+                    login(config.params[0], config.params[1]).then(deferred.resolve);
                 },
                 logout: function () {
                     github.removeCredentials();
                     deferred.resolve();
                 },
                 locate: function () {
-                    locate(config, filters, loadMore).then(deferred.resolve);
+                    locate(config, filters).then(deferred.resolve);
                 },
                 search: function () {
-                    search(config, filters, loadMore)
-                        .then(deferred.resolve);
+                    search(config, filters, loadMore).then(deferred.resolve);
                 },
                 show: function () {
-                    showIssues(config, command, loadMore)
-                        .then(deferred.resolve);
-
+                    showIssues(config, command, loadMore).then(deferred.resolve);
                 },
                 mine: function () {
-                    showMyIssues(filters, loadMore)
-                        .then(deferred.resolve);
+                    showMyIssues(filters, loadMore).then(deferred.resolve);
                 },
                 export: function () {
-                    handleExport(config)
-                        .then(deferred.resolve);
+                    handleExport(config).then(deferred.resolve);
                 },
             };
             commands.list = commands.show;
@@ -314,35 +308,79 @@
             var red = helper.chalk.red;
             var grey = helper.chalk.grey;
 
-            return {
-                stdout: _.map(result.items, function (repo) {
+            var stdout =  _.map(result.items, function (repo) {
                     return repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
-                }).join('\n'),
-                next: function () {
-                    return github.nextPage(response).then(locateSuccess);
-                }
+                }).join('\n');
+
+            var pages = github.nextPageUrl(response);
+            
+            var output = {
+                stdout: stdout
             };
+
+            if(pages.next) {
+                output.next = function () {
+                    return github.nextPage(pages.next.url).then(locateSuccess);
+                };        
+            }
+
+            return output;
 
         }
 
-        function search(config, filters, loadMore) {
+        function search(config, filters) {
 
-            var deferred = Q.defer();
             var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
 
-            github.searchIssues(config.params[0], repo, filters)
-                .then(function (response) {
-                    searchIssuesSuccess(response);
-                    var g = helper.chalk.green;
-                    // display number of results after 1st page
-                    console.log('Total results: ' + g(response.data.total_count)); // jshint ignore:line
-                    github.fetchNextPage(response.headers, searchIssuesSuccess, responseError, null, loadMore || 'ask')
-                        .then(deferred.resolve)
-                        .fail(deferred.reject);
-                })
-                .fail(responseError);
+            return github.searchIssues(config.params[0], repo, filters).then(searchSuccess);
 
-            return deferred.promise;
+        }
+
+        function searchSuccess(response) {
+
+            var data = response.data.items;
+            var issues = issuemd();
+            var githubIssues = _.isArray(data) ? data : [data];
+            var g = helper.chalk.green;
+
+            _.each(githubIssues, function (githubIssue) {
+
+                // should we introduce new template for search issues
+                // and capture different fields, adjusted to the template?
+                var issue = issuemd({})
+                    .attr({
+                        title: githubIssue.title,
+                        creator: helper.personFromParts({
+                            username: githubIssue.user.login
+                        }),
+                        created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
+                        body: githubIssue.body,
+                        id: githubIssue.number,
+                        assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
+                        status: githubIssue.state || ''
+                    });
+
+                issues.merge(issue);
+
+            });
+
+            var templateOptions = _.pick(localConfig, 'dim');
+
+            var stdout = issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions));
+            stdout += 'Total results: ' + g(response.data.total_count); // jshint ignore:line
+
+            var pages = github.nextPageUrl(response);
+            var output = {
+                stdout: stdout
+            };
+
+            if(pages.next) {
+                output.next = function () {
+                    return github.nextPage(pages.next.url).then(searchSuccess);
+                };
+            }
+
+            return output;
 
         }
 
@@ -440,39 +478,6 @@
             });
 
             var templateOptions = _.pick(localConfig, 'dim');
-            console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
-
-        }
-
-        function searchIssuesSuccess(response) {
-
-            var data = response.data.items;
-            var issues = issuemd();
-            var githubIssues = _.isArray(data) ? data : [data];
-
-            _.each(githubIssues, function (githubIssue) {
-
-                // should we introduce new template for search issues
-                // and capture different fields, adjusted to the template?
-                var issue = issuemd({})
-                    .attr({
-                        title: githubIssue.title,
-                        creator: helper.personFromParts({
-                            username: githubIssue.user.login
-                        }),
-                        created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
-                        body: githubIssue.body,
-                        id: githubIssue.number,
-                        assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
-                        status: githubIssue.state || ''
-                    });
-
-                issues.merge(issue);
-
-            });
-
-            var templateOptions = _.pick(localConfig, 'dim');
-
             console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
 
         }

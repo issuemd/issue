@@ -186,7 +186,8 @@
             searchRepository: api.searchRepositories,
             // TODO: remove fetchNextPage function
             fetchNextPage: fetchNextPage,
-            nextPage: nextPage,
+            nextPageUrl: nextPageUrl,
+            nextPage: api.nextPage,
             autoDetectRepo: autoDetectRepo,
             listIssues: listIssues,
             listPersonalIssues: listPersonalIssues,
@@ -558,7 +559,7 @@
         // HELPERS
         // ******************************************
 
-        function nextPage(response) {
+        function nextPageUrl(response) {
             var urls = {};
             if (response.headers && response.headers.link) {
                 // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
@@ -569,7 +570,7 @@
                     };
                 });
             }
-            return urls.next && api.nextPage(urls.next.url);
+            return urls;
         }
 
         // recursive function to handle github pagination
