@@ -2,7 +2,7 @@
 
 'use strict';
 
-describe('issue github', function() {
+describe('issue github', function () {
 
     var _ = require('underscore');
 
@@ -14,15 +14,15 @@ describe('issue github', function() {
         issueTemplates = require(rootpath + 'src/issue-templates.js'),
         github = require('../main.js')(pluginHelper.mockConfig, pluginHelper.issueHelper, issuemd, issueTemplates);
 
-    it('should load as function', function() {
+    it('should load as function', function () {
 
         expect(typeof github).toBe('function');
 
     });
 
-    _.each(['jquery', 'moment'], function(item) {
+    _.each(['jquery', 'moment'], function (item) {
 
-        it('should search for another specified term (' + item + ')', function(done) {
+        it('should search for another specified term (' + item + ')', function (done) {
 
             // call github plugin function with mocked config and command
             github({
@@ -33,7 +33,7 @@ describe('issue github', function() {
                         enabled: true
                     }
                 }
-            }, 'locate').then(function(result) {
+            }, 'locate').then(function (result) {
 
                 // should contain item namespace in top result
                 expect(new RegExp('^' + item).test(result.stdout)).toBe(true);
@@ -46,10 +46,7 @@ describe('issue github', function() {
 
     });
 
-    it('should show results summary (chance.js)', function(done) {
-
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
+    it('should show results summary (chance.js)', function (done) {
 
         // call github plugin function with mocked config and command
         github({
@@ -61,13 +58,10 @@ describe('issue github', function() {
                     enabled: true
                 }
             }
-        }, 'show').then(function() {
-
-            // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(1);
+        }, 'show').then(function (result) {
 
             // should contain summary table
-            expect(console.log.calls[0].args[0].length).toBe(4047);
+            expect(result.stdout.length).toBe(4047);
 
             done();
 
@@ -75,10 +69,7 @@ describe('issue github', function() {
 
     });
 
-    it('should show paginated results summary (chance.js)', function(done) {
-
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
+    it('should show paginated results summary (chance.js)', function (done) {
 
         // call github plugin function with mocked config and command
         github({
@@ -90,16 +81,14 @@ describe('issue github', function() {
                     enabled: true
                 }
             }
-        }, 'show').then(function() {
+        }, 'show').then(function (result) {
 
-            // should have two calls to console.log, one for each summary table
-            // the second table should be shorter than a full length summary
+            expect(result.stdout.length).toBe(4047);
 
-            expect(console.log.calls.length).toBe(2);
-            expect(console.log.calls[0].args[0].length).toBe(4047);
-            expect(console.log.calls[1].args[0].length).toBe(1310);
-
-            done();
+            result.next().then(function(result){
+                expect(result.stdout.length).toBe(1310);
+                done();
+            });
 
         });
 

@@ -42,10 +42,7 @@
                     search(config, filters, loadMore).then(deferred.resolve);
                 },
                 show: function () {
-                    showIssues(config, command, loadMore).then(deferred.resolve);
-                },
-                mine: function () {
-                    showMyIssues(filters, loadMore).then(deferred.resolve);
+                    show(config, command).then(deferred.resolve);
                 },
                 export: function () {
                     handleExport(config).then(deferred.resolve);
@@ -197,7 +194,7 @@
                         if (!localissue || localdate < remotedate) {
                             github.fetchIssue(repo.namespace, repo.id, issueInfo.number, filters)
                                 .then(function (response) {
-                                    writeIssueToDisk(fetchIssueSuccess(response));
+                                    writeIssueToDisk(fetchIssueCallback(response));
                                     nextIssue();
                                 });
                         } else {
@@ -297,56 +294,45 @@
         // ******************************************
 
         function locate(config, filters) {
-
             return github.searchRepository(config.params[0], filters).then(locateSuccess);
-
         }
 
         function locateSuccess(response) {
 
-            var result = response.data;
-            var red = helper.chalk.red;
-            var grey = helper.chalk.grey;
+            var result = response.data,
+                red = helper.chalk.red,
+                grey = helper.chalk.grey,
+                pages = github.nextPageUrl(response);
 
-            var stdout =  _.map(result.items, function (repo) {
-                    return repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
-                }).join('\n');
+            var stdout = _.map(result.items, function (repo) {
+                return repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
+            }).join('\n');
 
-            var pages = github.nextPageUrl(response);
-            
-            var output = {
-                stdout: stdout
-            };
-
-            if(pages.next) {
-                output.next = function () {
+            return {
+                stdout: stdout,
+                next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(locateSuccess);
-                };        
-            }
-
-            return output;
+                }
+            };
 
         }
 
         function search(config, filters) {
-
             var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
-
             return github.searchIssues(config.params[0], repo, filters).then(searchSuccess);
-
         }
 
         function searchSuccess(response) {
 
-            var data = response.data.items;
-            var issues = issuemd();
-            var githubIssues = _.isArray(data) ? data : [data];
-            var g = helper.chalk.green;
+            var data = response.data.items,
+                issues = issuemd(),
+                githubIssues = _.isArray(data) ? data : [data],
+                g = helper.chalk.green,
+                pages = github.nextPageUrl(response),
+                stdout;
 
             _.each(githubIssues, function (githubIssue) {
 
-                // should we introduce new template for search issues
-                // and capture different fields, adjusted to the template?
                 var issue = issuemd({})
                     .attr({
                         title: githubIssue.title,
@@ -364,23 +350,15 @@
 
             });
 
-            var templateOptions = _.pick(localConfig, 'dim');
-
-            var stdout = issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions));
+            stdout = issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(_.pick(localConfig, 'dim')));
             stdout += 'Total results: ' + g(response.data.total_count); // jshint ignore:line
 
-            var pages = github.nextPageUrl(response);
-            var output = {
-                stdout: stdout
-            };
-
-            if(pages.next) {
-                output.next = function () {
+            return {
+                stdout: stdout,
+                next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(searchSuccess);
-                };
-            }
-
-            return output;
+                }
+            };
 
         }
 
@@ -388,75 +366,43 @@
         // ISSUES
         // ******************************************
 
-        function showIssues(config, command, loadMore) {
-
-            var deferred = Q.defer();
+        function show(config) {
 
             // unless disabled, assueme autodetect is true
             var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
             var filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
 
-            if (!!repo && config.params.length === 0) {
-
-                github.listIssues(repo.namespace, repo.id, filters)
-                    .then(function (response) {
-                        listIssuesSuccess(response);
-                        github.fetchNextPage(response.headers, listIssuesSuccess, responseError, null, loadMore)
-                            .then(deferred.resolve);
-                    })
-                    .fail(responseError);
-
-            }
+            // $ issue github --repo moment/moment search
             // $ issue github --repo moment/moment search 2805
-            else if (!!repo && config.params.length === 1) {
-
-                github.fetchIssue(repo.namespace, repo.id, config.params[0])
-                    .then(function (response) {
-                        var issues = fetchIssueSuccess(response);
-                        // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
-                        var templateOptions = _.pick(localConfig, 'dim');
-                        console.log(issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)));
-                        deferred.resolve();
-                    })
-                    .fail(responseError);
-
+            if (!!repo && config.params.length === 0) {
+                return github.listIssues(repo.namespace, repo.id, filters).then(showSuccess);
+            } else if (!!repo && config.params.length === 1) {
+                return github.fetchIssue(repo.namespace, repo.id, config.params[0]).then(showIssueSuccess);
             }
 
-            return deferred.promise;
+        }
+
+        function showIssueSuccess(response) {
+
+            var issues = fetchIssueCallback(response),
+                templateOptions = _.pick(localConfig, 'dim'),
+                pages = github.nextPageUrl(response);
+
+            return {
+                stdout: issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)),
+                next: pages.next && function () {
+                    return github.nextPage(pages.next.url).then(showSuccess);
+                }
+            };
 
         }
 
-        function showMyIssues(filters, loadMore) {
-
-            var deferred = Q.defer();
-
-            github.listPersonalIssues(filters)
-                .then(function (response) {
-                    listIssuesSuccess(response);
-                    github.fetchNextPage(response.headers, listIssuesSuccess, responseError, null, loadMore)
-                        .then(deferred.resolve);
-                })
-                .fail(responseError);
-
-            return deferred.promise;
-
-        }
-
-        // ******************************************
-        // HELPERS
-        // ******************************************
-
-        function responseError(error) {
-            var errorTitle = helper.chalk.red('*** Error ' + error.error + ' ***');
-            console.log(errorTitle);
-            console.log(error.message);
-        }
-
-        function listIssuesSuccess(response) {
+        function showSuccess(response) {
 
             var data = response.data;
             var issues = issuemd();
             var githubIssues = _.isArray(data) ? data : [data];
+            var pages = github.nextPageUrl(response);
 
             _.each(githubIssues, function (githubIssue) {
 
@@ -477,12 +423,16 @@
 
             });
 
-            var templateOptions = _.pick(localConfig, 'dim');
-            console.log(issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(templateOptions)));
+            return {
+                stdout: issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(_.pick(localConfig, 'dim'))),
+                next: pages.next && function () {
+                    return github.nextPage(pages.next.url).then(showSuccess);
+                }
+            };
 
         }
 
-        function fetchIssueSuccess(githubIssue) {
+        function fetchIssueCallback(githubIssue) {
 
             var issues = issuemd();
             issues.addFromGithubJson(githubIssue);
