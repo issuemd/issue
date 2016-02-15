@@ -1,8 +1,8 @@
 'use strict';
 
-! function() {
+! function () {
 
-    module.exports = function(issueConfig, helper, issuemd, issueTemplates) {
+    module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
         var HOSTNAME = require('os').hostname();
 
@@ -16,7 +16,7 @@
             filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']),
             stderr = [];
 
-        var githubCli = function(config, command) {
+        var githubCli = function (config, command) {
 
             if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
                 stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
@@ -25,21 +25,23 @@
             var loadMore = config.answer || 'ask';
 
             var commands = {
-                limit: limit,
-                login: function() {
+                limit: function () {
+                    return limit();
+                },
+                login: function () {
                     return login(config.params[0], config.params[1]);
                 },
                 logout: github.removeCredentials,
-                locate: function() {
+                locate: function () {
                     return locate(config, filters);
                 },
-                search: function() {
+                search: function () {
                     return search(config, filters, loadMore);
                 },
-                show: function() {
+                show: function () {
                     return show(config, command);
                 },
-                export: function() {
+                export: function () {
                     return handleExport(config);
                 },
             };
@@ -123,11 +125,11 @@
 
             var issueList = [];
 
-            github.listIssues(repo.namespace, repo.id, filters).then(function(response) {
+            github.listIssues(repo.namespace, repo.id, filters).then(function (response) {
 
                 buildIssueList(response);
 
-                github.fetchNextPage(response.headers, buildIssueList, function() {}, function() {
+                github.fetchNextPage(response.headers, buildIssueList, function () {}, function () {
 
                     nextIssue();
 
@@ -153,7 +155,7 @@
                             filename = path.join(mypath, repo.id + '-' + issueInfo.number + '.issue.md');
                         try {
                             localissue = issuemd(fs.readFileSync(filename, 'utf8'));
-                            localdate = new Date(localissue.eq(0).updates().reduce(function(memo, event) {
+                            localdate = new Date(localissue.eq(0).updates().reduce(function (memo, event) {
                                 return event.type !== 'reference' ? event.modified : memo; // jshint ignore:line
                             }, localissue.attr('created')));
                         } catch (e) {
@@ -163,7 +165,7 @@
                         }
                         if (!localissue || localdate < remotedate) {
                             github.fetchIssue(repo.namespace, repo.id, issueInfo.number, filters)
-                                .then(function(response) {
+                                .then(function (response) {
                                     writeIssueToDisk(fetchIssueCallback(response));
                                     nextIssue();
                                 });
@@ -179,7 +181,7 @@
             return deferred.promise;
 
             function buildIssueList(response) {
-                issueList = issueList.concat(_.map(response.data, function(item) {
+                issueList = issueList.concat(_.map(response.data, function (item) {
                     return _.pick(item, 'number', 'updated_at');
                 }));
             }
@@ -192,7 +194,7 @@
                     mypath = path.resolve(config.dest),
                     filename;
 
-                issues.each(function(issue) {
+                issues.each(function (issue) {
 
                     try {
                         mkdirp.sync(mypath);
@@ -217,15 +219,14 @@
             var w = helper.chalk.white;
             var g = helper.chalk.green;
 
-            return github.rateLimit()
-                .then(function(rateLimits) {
-                    return {
-                        stderr: stderr,
-                        stdout: _.map(rateLimits, function(value, name) {
-                            return w(name + ' requests: ') + colorLimit(value.remaining, value.limit) + w('/' + value.limit + ', resets in: ') + g(getMinutes(value.reset)) + w(' mins');
-                        }).join('\n')
-                    };
-                });
+            return github.rateLimit().then(function (rateLimits) {
+                return {
+                    stderr: stderr,
+                    stdout: _.map(rateLimits, function (value, name) {
+                        return w(name + ' requests: ') + colorLimit(value.remaining, value.limit) + w('/' + value.limit + ', resets in: ') + g(getMinutes(value.reset)) + w(' mins');
+                    }).join('\n')
+                };
+            });
 
             function colorLimit(value, limit) {
 
@@ -267,9 +268,9 @@
 
             // if somebody already typed in username and password
             helper.captureCredentials(username, password)
-                .then(function(credentials) {
+                .then(function (credentials) {
                     return github.login(credentials.username, credentials.password, github.generateTokenName(credentials.username, HOSTNAME))
-                        .then(function(result) {
+                        .then(function (result) {
                             deferred.resolve({
                                 stderr: result
                             });
@@ -296,14 +297,14 @@
                 grey = helper.chalk.grey,
                 pages = github.nextPageUrl(response);
 
-            var stdout = _.map(result.items, function(repo) {
+            var stdout = _.map(result.items, function (repo) {
                 return repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
             }).join('\n');
 
             return {
                 stderr: stderr,
                 stdout: stdout,
-                next: pages.next && function() {
+                next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(locateSuccess);
                 }
             };
@@ -324,7 +325,7 @@
                 pages = github.nextPageUrl(response),
                 stdout;
 
-            _.each(githubIssues, function(githubIssue) {
+            _.each(githubIssues, function (githubIssue) {
 
                 var issue = issuemd({})
                     .attr({
@@ -349,7 +350,7 @@
             return {
                 stderr: stderr,
                 stdout: stdout,
-                next: pages.next && function() {
+                next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(searchSuccess);
                 }
             };
@@ -385,7 +386,7 @@
             return {
                 stderr: stderr,
                 stdout: issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)),
-                next: pages.next && function() {
+                next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(showSuccess);
                 }
             };
@@ -399,7 +400,7 @@
             var githubIssues = _.isArray(data) ? data : [data];
             var pages = github.nextPageUrl(response);
 
-            _.each(githubIssues, function(githubIssue) {
+            _.each(githubIssues, function (githubIssue) {
 
                 var issue = issuemd({})
                     .attr({
@@ -421,7 +422,7 @@
             return {
                 stderr: stderr,
                 stdout: issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(_.pick(localConfig, 'dim'))),
-                next: pages.next && function() {
+                next: pages.next && function () {
                     return github.nextPage(pages.next.url).then(showSuccess);
                 }
             };
@@ -434,13 +435,13 @@
             issues.addFromGithubJson(githubIssue);
 
             if (githubIssue.comments.length > 0) {
-                _.each(githubIssue.comments, function(comment) {
+                _.each(githubIssue.comments, function (comment) {
                     issues.addGithubComment(githubIssue.number, comment);
                 });
             }
 
             if (githubIssue.events && githubIssue.events.length > 0) {
-                _.each(githubIssue.events, function(event) {
+                _.each(githubIssue.events, function (event) {
                     issues.addGithubEvent(githubIssue.number, event);
                 });
             }

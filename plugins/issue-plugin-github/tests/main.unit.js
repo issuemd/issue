@@ -1,5 +1,3 @@
-/* globals jasmine */
-
 'use strict';
 
 describe('issue github', function () {
@@ -85,7 +83,7 @@ describe('issue github', function () {
 
             expect(result.stdout.length).toBe(4047);
 
-            result.next().then(function(result){
+            result.next().then(function (result) {
                 expect(result.stdout.length).toBe(1310);
                 done();
             });

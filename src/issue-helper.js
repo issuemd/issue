@@ -73,7 +73,7 @@
             options.uri = (!/^https?:/.test(url) ? options.host : '') + url;
 
             request(options, function (err, res, body) {
-                if(err){
+                if (err) {
                     deferred.reject(err);
                 } else if (res.statusCode >= 400) {
 

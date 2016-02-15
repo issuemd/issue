@@ -4,7 +4,8 @@ module.exports = function () {
 
     return function (config, helper) {
 
-        var _ = require('underscore');
+        var _ = require('underscore'),
+            Q = require('q');
 
         var apiDefaults = {
             host: 'api.github.com',
@@ -140,7 +141,8 @@ module.exports = function () {
 
         function ajaxWrapper(url, opts, body) {
 
-            var options = _.extend({}, apiDefaults, opts);
+            var options = _.extend({}, apiDefaults, opts),
+                deferred = new Q.defer();
 
             // if Basic Auth is not present, check for existing access token
             if (!/[?&]access_token=/.test(url) && (!options.headers || !options.headers.Authorization) && config.plugins && config.plugins.github && config.plugins.github.authToken) {
@@ -157,21 +159,24 @@ module.exports = function () {
                 });
             }
 
-            var promise = helper.ajax(url, options, body);
+            helper.ajax(url, options, body).then(function (response) {
+                    if (response.headers['x-ratelimit-remaining'] * 1 < 4950) {
+                        deferred.notify({
+                            stdout: 'Github api calls remaining: ' + response.headers['x-ratelimit-remaining']
+                        });
+                    }
+                    deferred.resolve(response);
+                })
+                .fail(function (error) {
+                    if (error.response.headers['x-ratelimit-remaining'] === '0') {
+                        deferred.notify({
+                            stderr: 'Rate limit exceeded'
+                        });
+                    }
+                    deferred.reject(error);
+                });
 
-            promise.then(function (response) {
-                if (response.headers['x-ratelimit-remaining'] * 1 < 5) {
-                    console.log('Github api calls remaining: ' + response.headers['x-ratelimit-remaining']);
-                }
-            });
-
-            promise.fail(function (error) {
-                if (error.response.headers['x-ratelimit-remaining'] === '0') {
-                    console.log('Rate limit exceeded');
-                }
-            });
-
-            return promise;
+            return deferred.promise;
 
         }
 

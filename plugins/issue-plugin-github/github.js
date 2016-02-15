@@ -202,20 +202,11 @@
         // ******************************************
 
         function rateLimit() {
-            var deferred = Q.defer();
 
-            api.rateLimit()
-                .then(function (response) {
-                    deferred.resolve(response.data.resources);
-                })
-                .fail(function (error) {
-                    deferred.reject({
-                        error: error.error,
-                        message: error.message
-                    });
-                });
+            return api.rateLimit().then(function (response) {
+                return response.data.resources;
+            });
 
-            return deferred.promise;
         }
 
 

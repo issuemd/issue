@@ -55,16 +55,16 @@
                     helptext = fs.readFileSync(src + 'issue-cli-usage.txt', 'UTF-8');
                 }
 
-                console.log(helptext);
+                return helptext;
 
             } else if (!!plugins[command]) {
                 cliParams.shift();
                 var subCommand = cliParams.shift();
                 return plugins[command](config, subCommand);
             } else if (plugins[command] === false) {
-                console.log('The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n');
+                return 'The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n';
             } else {
-                console.log('Don\'t understand that command... sorry :-/');
+                return 'Don\'t understand that command... sorry :-/';
             }
         }
     }
