@@ -225,13 +225,15 @@
         // ******************************************
 
         function removeCredentials() {
+            var deferred = Q.defer();
             try {
                 issueConfig('plugins.github.authToken', '', true);
                 issueConfig('plugins.github.authTokenId', '', true);
+                deferred.resolve();
             } catch (e) {
-                console.log('Error: not able write to userconfig - probably need to create config file in home directory:\n\n\tcd ' + (process.platform === 'win32' ? process.env.USERPROFILE : process.env.HOME) + '\n\tissue init\n');
-                return;
+                deferred.reject(e);
             }
+            return deferred.promise;
         }
 
 
@@ -298,9 +300,9 @@
             try {
                 issueConfig('plugins.github.authToken', token, true);
                 issueConfig('plugins.github.authTokenId', tokenId, true);
-                return Q.resolve('success');
+                return Q.resolve();
             } catch (e) {
-                return Q.reject('error');
+                return Q.reject(e);
             }
         }
 
@@ -330,9 +332,7 @@
                                         .then(function () {
                                             deferred.resolve('Login Success!');
                                         })
-                                        .fail(function () {
-                                            deferred.reject('Writing config failed');
-                                        });
+                                        .fail(deferred.reject);
 
                                 })
                                 .fail(function (error) {

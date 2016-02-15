@@ -73,7 +73,9 @@
             options.uri = (!/^https?:/.test(url) ? options.host : '') + url;
 
             request(options, function (err, res, body) {
-                if (res.statusCode >= 400) {
+                if(err){
+                    deferred.reject(err);
+                } else if (res.statusCode >= 400) {
 
                     // inspired by GitHub API unit tests
                     // https://github.com/milo/github-api/blob/f8dc2d4ba958c265a0a6832ad650b1686c5fbe59/src/Github/Api.php#L281

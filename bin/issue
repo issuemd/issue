@@ -18,7 +18,7 @@ resultHandler(require(src + '/issue-cli.js').run(process.argv));
 function resultHandler(promise) {
 
     // TODO: remove condition - throw error if not then-able
-    promise && promise.then && promise.then(function (result) {
+    promise && (promise.then || promise.fail) && promise.then(function (result) {
         _.each(['stdout', 'stderr'], function(item){
             if(_.isArray(result[item])){
                 result[item] = result[item].join('\n');
@@ -36,6 +36,11 @@ function resultHandler(promise) {
                 resultHandler(result.next());
             }
         }
+    }).fail(function(error){
+        // {stderr:'Writing config failed'}
+        // 'Error: not able write to userconfig - probably need to create config file in home directory:\n\n\tcd ' + (process.platform === 'win32' ? process.env.USERPROFILE : process.env.HOME) + '\n\tissue init\n'
+        console.error(error);
+        // console.error('Error: ' + error.message || error);
     });
 
 }
