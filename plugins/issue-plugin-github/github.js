@@ -184,16 +184,12 @@
             writeGithubToken: writeGithubToken,
             login: login,
             searchRepository: api.searchRepositories,
-            // TODO: remove fetchNextPage function
-            fetchNextPage: fetchNextPage,
             nextPageUrl: nextPageUrl,
             nextPage: api.nextPage,
             autoDetectRepo: autoDetectRepo,
             listIssues: listIssues,
             listPersonalIssues: listPersonalIssues,
             fetchIssue: fetchIssue,
-            fetchIssueComments: fetchIssueComments,
-            fetchIssueEvents: fetchIssueEvents,
             searchIssues: searchIssues
         };
 
@@ -410,10 +406,10 @@
         function getCommentsAndEvents(user, repository, number, issue, deferred) {
 
             // fetch all comments and add them to the queue
-            fetchIssueComments(user, repository, number)
+            fetchAll(api.getIssueComments, [user, repository, number])
                 .then(function (comments) {
                     issue.comments = comments;
-                    return fetchIssueEvents(user, repository, number).then(function (events) {
+                    return fetchAll(api.getIssueEvents, [user, repository, number]).then(function (events) {
                         issue.events = events;
                     });
                 })
@@ -486,69 +482,29 @@
 
         }
 
-        function fetchIssueComments(user, repository, number) {
-            var deferred = Q.defer();
-            var comments = [];
-
-            api.getIssueComments(user, repository, number)
-                .then(function (response) {
-
-                    onSuccess(response);
-                    fetchNextPage(response.headers, onSuccess, onError, onComplete, 'yes');
-
-                });
-
-            function onSuccess(response) {
-                var jsonComments = response.data;
-                comments = comments.concat(jsonComments);
-            }
-
-            function onError(error) {
-                deferred.reject(error);
-            }
-
-            function onComplete() {
-                deferred.resolve(comments);
-            }
-
-            return deferred.promise;
-        }
-
-        function fetchIssueEvents(user, repository, number) {
-
-            var deferred = Q.defer();
-            var events = [];
-
-            api.getIssueEvents(user, repository, number)
-                .then(function (response) {
-
-                    onSuccess(response);
-                    fetchNextPage(response.headers, onSuccess, onError, onComplete, 'yes');
-
-                });
-
-            function onSuccess(response) {
-                var jsonEvents = response.data;
-                events = events.concat(jsonEvents);
-            }
-
-            function onError(error) {
-                deferred.reject(error);
-            }
-
-            function onComplete() {
-                deferred.resolve(events);
-            }
-
-            return deferred.promise;
-
-        }
-
 
 
         // ******************************************
         // HELPERS
         // ******************************************
+
+        function fetchAll(apiFunction, args) {
+
+            var events = [];
+
+            return apiFunction.apply(null, args).then(success);
+
+            function success(response) {
+
+                events = events.concat(response.data);
+
+                var pages = nextPageUrl(response);
+
+                return pages.next && api.nextPage(pages.next.url).then(success) || events;
+
+            }
+
+        }
 
         function nextPageUrl(response) {
             var urls = {};
@@ -562,67 +518,6 @@
                 });
             }
             return urls;
-        }
-
-        // recursive function to handle github pagination
-        function fetchNextPage(headers, onPageSuccess, onPageError, onComplete, promptAnswer) {
-
-            var pages = getPages(headers),
-                deferred = Q.defer();
-
-            // if there are more pages
-            if (pages.next) {
-
-                // if no promptAnswer specified, or specified to ask,
-                // otherwise read default answer form config
-                // or ask for confirmation
-                if (!promptAnswer || promptAnswer === 'ask') {
-                    helper.promptYesNo('Load more results? [yN]', callApiNextPage, callCompleteCallback);
-                } else if (!!promptAnswer) {
-                    helper.yesno(promptAnswer) ? callApiNextPage() : callCompleteCallback();
-                }
-
-            } else {
-                // no pages, call onComplete callback right away
-                callCompleteCallback();
-            }
-
-            return deferred.promise;
-
-            function callCompleteCallback() {
-                if (_.isFunction(onComplete)) {
-                    onComplete();
-                }
-                deferred.resolve();
-            }
-
-            function callApiNextPage() {
-                // failure callback handled elsewhere, this call should never fail
-                api.nextPage(pages.next)
-                    .then(function (response) {
-                        // when next page is fetched, execute onPageSuccess callback
-                        if (_.isFunction(onPageSuccess)) {
-                            onPageSuccess(response);
-                        }
-                        // check if there are more pages to fetch
-                        fetchNextPage(response.headers, onPageSuccess, onPageError, onComplete, promptAnswer)
-                            .then(deferred.resolve);
-                    })
-                    .fail(onPageError);
-            }
-
-        }
-
-        // extract number of pages from the header
-        function getPages(headers) {
-            var pagination = {};
-            if (headers && headers.link) {
-                // http://regexper.com/#%2F%3C(.*%3F)%3E%3B%5Cs*rel%3D%22(.*%3F)%22%2Fg
-                headers.link.replace(/<(.*?)>;\s*rel="(.*?)"/g, function (_, url, name) {
-                    pagination[name] = url;
-                });
-            }
-            return pagination;
         }
 
         function autoDetectRepo(configRepo, configAutoDectect, configGitRemote) {
