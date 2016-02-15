@@ -397,88 +397,66 @@
             return api.getPersonalIssues(filters);
         }
 
-        function fetchIssuePullRequests(user, repository, number) {
-
-            return api.getIssuePullRequests(user, repository, number);
-
-        }
-
-        function getCommentsAndEvents(user, repository, number, issue, deferred) {
-
-            // fetch all comments and add them to the queue
-            fetchAll(api.getIssueComments, [user, repository, number])
-                .then(function (comments) {
-                    issue.comments = comments;
-                    return fetchAll(api.getIssueEvents, [user, repository, number]).then(function (events) {
-                        issue.events = events;
-                    });
-                })
-                .then(handlePullRequests);
-
-            function handlePullRequests() {
-                if (!!issue.pull_request) { // jshint ignore:line
-                    fetchIssuePullRequests(user, repository, number)
-                        .then(function (response) {
-                            if (response.data.updated_at) { // jshint ignore:line
-                                issue.events.push({
-                                    event: 'pull_request',
-                                    actor: {
-                                        login: response.data.user.login
-                                    },
-                                    created_at: response.data.updated_at // jshint ignore:line
-                                });
-                            }
-                            deferred.resolve(issue);
-                        });
-                } else {
-
-                    var lastCommentOrEventUpdate = issue.events.reduce(function (memo, item) {
-                        return item.event !== 'referenced' && new Date(item.created_at) > new Date(memo) ? item.created_at : memo; // jshint ignore:line
-                    }, issue.comments.length && issue.comments[issue.comments.length - 1].updated_at); // jshint ignore:line
-
-                    var calculatedUpdateTime;
-
-                    if (!lastCommentOrEventUpdate && issue.created_at !== issue.updated_at) { // jshint ignore:line
-                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
-                    } else if (!!lastCommentOrEventUpdate && new Date(issue.updated_at) > new Date(lastCommentOrEventUpdate)) { // jshint ignore:line
-                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
-                    }
-
-                    if (!!calculatedUpdateTime) { // jshint ignore:line
-                        var newevent = {
-                            event: 'update',
-                            actor: {
-                                login: issue.user.login
-                            },
-                            created_at: calculatedUpdateTime // jshint ignore:line
-                        };
-                        issue.events.push(newevent);
-                    }
-
-                    deferred.resolve(issue);
-
-                }
-            }
-
-        }
-
         function fetchIssue(user, repository, number) {
 
-            var deferred = Q.defer();
+            return api.getIssue(user, repository, number).then(getCommentsAndEvents);
 
-            api.getIssue(user, repository, number)
-                .then(function (response) {
+            function getCommentsAndEvents(response) {
 
-                    var issue = response.data;
+                var issue = response.data;
 
-                    getCommentsAndEvents(user, repository, number, issue, deferred);
+                var requests = [
+                    fetchAll(api.getIssueEvents, [user, repository, number]),
+                    fetchAll(api.getIssueComments, [user, repository, number])
+                ].concat(issue.pull_request ? api.getIssuePullRequests(user, repository, number) : []); // jshint ignore:line
 
-                })
-                .fail(function (error) {
-                    deferred.reject(error);
+                return Q.all(requests).spread(function (events, comments, pullRequests) {
+
+                    issue.comments = comments;
+                    issue.events = events;
+
+                    if (pullRequests && pullRequests.data.updated_at) { // jshint ignore:line
+
+                        issue.events.push({
+                            event: 'pull_request',
+                            actor: {
+                                login: pullRequests.data.user.login
+                            },
+                            created_at: pullRequests.data.updated_at // jshint ignore:line
+                        });
+
+                    } else {
+
+                        var lastCommentOrEventUpdate = issue.events.reduce(function (memo, item) {
+                            return item.event !== 'referenced' && new Date(item.created_at) > new Date(memo) ? item.created_at : memo; // jshint ignore:line
+                        }, issue.comments.length && issue.comments[issue.comments.length - 1].updated_at); // jshint ignore:line
+
+                        var calculatedUpdateTime;
+
+                        if (!lastCommentOrEventUpdate && issue.created_at !== issue.updated_at) { // jshint ignore:line
+                            calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                        } else if (!!lastCommentOrEventUpdate && new Date(issue.updated_at) > new Date(lastCommentOrEventUpdate)) { // jshint ignore:line
+                            calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                        }
+
+                        if (!!calculatedUpdateTime) { // jshint ignore:line
+                            var newevent = {
+                                event: 'update',
+                                actor: {
+                                    login: issue.user.login
+                                },
+                                created_at: calculatedUpdateTime // jshint ignore:line
+                            };
+                            issue.events.push(newevent);
+                        }
+
+                    }
+
+                    return issue;
+
                 });
 
-            return deferred.promise;
+            }
 
         }
 
