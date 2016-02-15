@@ -22,56 +22,50 @@
                 stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
             }
 
-            var deferred = Q.defer();
             var loadMore = config.answer || 'ask';
 
             var commands = {
-                limit: function() {
-                    limit().then(deferred.resolve).fail(deferred.reject);
-                },
+                limit: limit,
                 login: function() {
-                    login(config.params[0], config.params[1]).then(deferred.resolve).fail(deferred.reject);
+                    return login(config.params[0], config.params[1]);
                 },
-                logout: function() {
-                    github.removeCredentials().then(deferred.resolve).fail(deferred.reject);
-                },
+                logout: github.removeCredentials,
                 locate: function() {
-                    locate(config, filters).then(deferred.resolve).fail(deferred.reject);
+                    return locate(config, filters);
                 },
                 search: function() {
-                    search(config, filters, loadMore).then(deferred.resolve).fail(deferred.reject);
+                    return search(config, filters, loadMore);
                 },
                 show: function() {
-                    show(config, command).then(deferred.resolve).fail(deferred.reject);
+                    return show(config, command);
                 },
                 export: function() {
-                    handleExport(config).then(deferred.resolve).fail(deferred.reject);
+                    return handleExport(config);
                 },
             };
             commands.list = commands.show;
 
             if (commands[command]) {
-                commands[command]();
+                return commands[command]();
             } else {
-                deferred.resolve({
-                    stdout: [
-                        'Unknown command',
-                        '',
-                        'Usage:',
-                        '',
-                        '  issue github list mine',
-                        '  issue github list --repo <namespace/project>',
-                        '  issue github show --repo <namespace/project> <id>',
-                        '',
-                        'Example:',
-                        '',
-                        '  issue github show --repo victorquinn/chancejs 207',
-                        ''
-                    ]
-                });
+                return config.help ? githubCli.helptext : [
+                    'Unknown command... try:',
+                    '',
+                    '  issue github --help',
+                    '',
+                    'Usage:',
+                    '',
+                    '  issue github list mine',
+                    '  issue github list --repo <namespace/project>',
+                    '  issue github show --repo <namespace/project> <id>',
+                    '',
+                    'Example:',
+                    '',
+                    '  issue github show --repo victorquinn/chancejs 207',
+                    ''
+                ].join('\n');
             }
 
-            return deferred.promise;
 
         };
 
@@ -129,53 +123,27 @@
 
             var issueList = [];
 
-            var buildIssueList = function(response) {
-                issueList = issueList.concat(_.map(response.data, function(item) {
-                    return _.pick(item, 'number', 'updated_at');
-                }));
-            };
-
-            var writeIssueToDisk = function(issues) {
-
-                var path = require('path'),
-                    fs = require('fs'),
-                    mkdirp = require('mkdirp'),
-                    mypath = path.resolve(config.dest),
-                    filename;
-
-                issues.each(function(issue) {
-
-                    try {
-                        mkdirp.sync(mypath);
-                        fs.accessSync(mypath);
-                        filename = path.join(mypath, issue.attr('project') + '-' + issue.attr('number') + '.issue.md');
-                        fs.writeFileSync(filename, issue.md());
-                        console.log('Writing to disk: ' + path.relative(process.cwd(), filename));
-                    } catch (e) {
-                        console.log(e);
-                    }
-
-                });
-
-            };
-
             github.listIssues(repo.namespace, repo.id, filters).then(function(response) {
 
                 buildIssueList(response);
 
                 github.fetchNextPage(response.headers, buildIssueList, function() {}, function() {
 
-                    var nextIssue = function() {
+                    nextIssue();
+
+                    function nextIssue() {
 
                         if (issueList.length) {
                             getIssue(issueList.pop());
                         } else {
-                            deferred.resolve();
+                            deferred.resolve({
+                                stderr: stderr
+                            });
                         }
 
-                    };
+                    }
 
-                    var getIssue = function(issueInfo) {
+                    function getIssue(issueInfo) {
                         var path = require('path'),
                             fs = require('fs'),
                             localissue,
@@ -190,7 +158,7 @@
                             }, localissue.attr('created')));
                         } catch (e) {
                             if (e.code !== 'ENOENT') {
-                                console.log(e);
+                                deferred.notify(e);
                             }
                         }
                         if (!localissue || localdate < remotedate) {
@@ -202,15 +170,45 @@
                         } else {
                             nextIssue();
                         }
-                    };
-
-                    nextIssue();
+                    }
 
                 }, config.answer || 'ask');
 
             });
 
             return deferred.promise;
+
+            function buildIssueList(response) {
+                issueList = issueList.concat(_.map(response.data, function(item) {
+                    return _.pick(item, 'number', 'updated_at');
+                }));
+            }
+
+            function writeIssueToDisk(issues) {
+
+                var path = require('path'),
+                    fs = require('fs'),
+                    mkdirp = require('mkdirp'),
+                    mypath = path.resolve(config.dest),
+                    filename;
+
+                issues.each(function(issue) {
+
+                    try {
+                        mkdirp.sync(mypath);
+                        fs.accessSync(mypath);
+                        filename = path.join(mypath, issue.attr('project') + '-' + issue.attr('number') + '.issue.md');
+                        fs.writeFileSync(filename, issue.md());
+                        deferred.notify({
+                            stderr: 'Writing to disk: ' + path.relative(process.cwd(), filename)
+                        });
+                    } catch (e) {
+                        stderr.push(e.message);
+                    }
+
+                });
+
+            }
 
         }
 
