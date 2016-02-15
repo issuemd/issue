@@ -406,8 +406,8 @@
                 var issue = response.data;
 
                 var requests = [
-                    fetchAll(api.getIssueEvents, [user, repository, number]),
-                    fetchAll(api.getIssueComments, [user, repository, number])
+                    api.getIssueEvents(user, repository, number).then(pages),
+                    api.getIssueComments(user, repository, number).then(pages)
                 ].concat(issue.pull_request ? api.getIssuePullRequests(user, repository, number) : []); // jshint ignore:line
 
                 return Q.all(requests).spread(function (events, comments, pullRequests) {
@@ -466,26 +466,24 @@
         // HELPERS
         // ******************************************
 
-        function fetchAll(apiFunction, args) {
+        function pages(response) {
 
-            var events = [];
+            var data = [];
 
-            return apiFunction.apply(null, args).then(success);
+            return success(response);
 
             function success(response) {
-
-                events = events.concat(response.data);
-
+                data = data.concat(response.data);
                 var pages = nextPageUrl(response);
-
-                return pages.next && api.nextPage(pages.next.url).then(success) || events;
-
+                return pages.next && api.nextPage(pages.next.url).then(success) || data;
             }
 
         }
 
         function nextPageUrl(response) {
+
             var urls = {};
+
             if (response.headers && response.headers.link) {
                 // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
                 response.headers.link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, function (_, url, page, name) {
@@ -495,7 +493,9 @@
                     };
                 });
             }
+
             return urls;
+            
         }
 
         function autoDetectRepo(configRepo, configAutoDectect, configGitRemote) {
