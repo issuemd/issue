@@ -26,23 +26,14 @@
 
             var commands = {
                 limit: limit,
-                login: function() {
-                    return login(config.params[0], config.params[1]);
-                },
+                login: _.partial(login, config.params[0], config.params[1]),
                 logout: github.removeCredentials,
-                locate: function() {
-                    return locate(config, filters);
-                },
-                search: function() {
-                    return search(config, filters, loadMore);
-                },
-                show: function() {
-                    return show(config, command);
-                },
-                export: function() {
-                    return handleExport(config);
-                },
+                locate: _.partial(locate, config, filters),
+                search: _.partial(search, config, filters, loadMore),
+                show: _.partial(show, config, command),
+                export: _.partial(handleExport, config)
             };
+
             commands.list = commands.show;
 
             if (commands[command]) {
@@ -102,15 +93,8 @@
         return githubCli;
 
 
-
-
-
-
-
-
-
         // ******************************************
-        // LIMIT
+        // EXPORT
         // ******************************************
 
         function handleExport(config) {
@@ -230,6 +214,10 @@
 
         }
 
+        // ******************************************
+        // LIMIT
+        // ******************************************
+
         function limit() {
 
             var w = helper.chalk.white;
@@ -268,35 +256,25 @@
 
         }
 
-
-
-
         // ******************************************
         // LOGIN
         // ******************************************
 
         function login(username, password) {
 
-            var deferred = Q.defer();
-
             // first logout, which ensures userconfig is writable
-            github.removeCredentials();
-
-            // if somebody already typed in username and password
-            helper.captureCredentials(username, password)
-                .then(function(credentials) {
-                    return github.login(credentials.username, credentials.password, github.generateTokenName(credentials.username, HOSTNAME))
-                        .then(function(result) {
-                            deferred.resolve({
-                                stderr: result
-                            });
-                        }).fail(deferred.reject);
-                }).fail(deferred.reject);
-
-            return deferred.promise;
+            return github.removeCredentials().then(function() {
+                // if somebody already typed in username and password
+                return helper.captureCredentials(username, password);
+            }).then(function(credentials) {
+                return github.login(credentials.username, credentials.password, github.generateTokenName(credentials.username, HOSTNAME));
+            }).then(function(result) {
+                return {
+                    stderr: result
+                };
+            });
 
         }
-
 
         // ******************************************
         // SEARCH
