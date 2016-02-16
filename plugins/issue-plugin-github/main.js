@@ -4,7 +4,7 @@
 
     module.exports = function(issueConfig, helper, issuemd, issueTemplates) {
 
-        var HOSTNAME = require('os').hostname();
+        var hostname = require('os').hostname();
 
         var _ = require('underscore'),
             Q = require('q');
@@ -146,7 +146,7 @@
                     return limitEach(stale, config.throttle, function(issueId, cb) {
                         github.fetchIssue(repo.namespace, repo.id, issueId, filters)
                             .then(function(response) {
-                                writeIssueToDisk(fetchIssueCallback(response));
+                                writeIssueToDisk(issueFromApiJson(response));
                                 cb();
                             });
                     });
@@ -267,7 +267,7 @@
                 // if somebody already typed in username and password
                 return helper.captureCredentials(username, password);
             }).then(function(credentials) {
-                return github.login(credentials.username, credentials.password, github.generateTokenName(credentials.username, HOSTNAME));
+                return github.login(credentials.username, credentials.password, github.generateTokenName(credentials.username, hostname));
             }).then(function(result) {
                 return {
                     stderr: result
@@ -377,7 +377,7 @@
 
         function showIssueSuccess(response) {
 
-            var issues = fetchIssueCallback(response),
+            var issues = issueFromApiJson(response),
                 templateOptions = _.pick(localConfig, 'dim'),
                 pages = github.nextPageUrl(response);
 
@@ -393,29 +393,24 @@
 
         function showSuccess(response) {
 
-            var data = response.data;
-            var issues = issuemd();
-            var githubIssues = _.isArray(data) ? data : [data];
+            var githubIssues = _.isArray(response.data) ? response.data : [response.data];
             var pages = github.nextPageUrl(response);
 
-            _.each(githubIssues, function(githubIssue) {
+            var issues = _.reduce(githubIssues, function(issues, githubIssue) {
 
-                var issue = issuemd({})
-                    .attr({
-                        title: githubIssue.title,
-                        creator: helper.personFromParts({
-                            username: githubIssue.user.login
-                        }),
-                        created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
-                        body: githubIssue.body,
-                        id: githubIssue.number,
-                        assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
-                        status: githubIssue.state || ''
-                    });
+                return issues.merge(issuemd({
+                    title: githubIssue.title,
+                    creator: helper.personFromParts({
+                        username: githubIssue.user.login
+                    }),
+                    created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
+                    body: githubIssue.body,
+                    id: githubIssue.number,
+                    assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
+                    status: githubIssue.state || ''
+                }));
 
-                issues.merge(issue);
-
-            });
+            }, issuemd());
 
             return {
                 stderr: stderr,
@@ -427,25 +422,166 @@
 
         }
 
-        function fetchIssueCallback(githubIssue) {
+        // ******************************************
+        // GITHUB API TO ISSUEMD CONVERTER
+        // ******************************************
 
-            var issues = issuemd();
-            issues.addFromGithubJson(githubIssue);
+        function issueFromApiJson(githubIssue) {
 
-            if (githubIssue.comments.length > 0) {
-                _.each(githubIssue.comments, function(comment) {
-                    issues.addGithubComment(githubIssue.number, comment);
-                });
+            // create issuemd instance
+            var issue = issuemd({
+                title: githubIssue.title,
+                creator: helper.personFromParts({ username: githubIssue.user.login }),
+                created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
+                body: githubIssue.body,
+            });
+
+            var attr = {};
+
+            // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
+            var repoName = githubIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
+            if (repoName) {
+                attr.project = repoName;
             }
 
-            if (githubIssue.events && githubIssue.events.length > 0) {
-                _.each(githubIssue.events, function(event) {
-                    issues.addGithubEvent(githubIssue.number, event);
-                });
-            }
+            var attributes = {
+                status: function() {
+                    return githubIssue.state;
+                },
+                number: function() {
+                    return githubIssue.number;
+                },
+                locked: function() {
+                    return githubIssue.locked;
+                },
+                assignee: function() {
+                    return githubIssue.assignee && githubIssue.assignee.login;
+                },
+                updated: function() {
+                    return helper.dateStringToIso(githubIssue.updated_at); // jshint ignore:line
+                },
+                pull_request_url: function() { // jshint ignore:line
+                    return githubIssue.pull_request && githubIssue.pull_request.url; // jshint ignore:line
+                },
+                milestone: function() {
+                    return githubIssue.milestone && githubIssue.milestone.title;
+                },
+                closed: function() {
+                    return githubIssue.closed && helper.dateStringToIso(githubIssue.closed_at); // jshint ignore:line
+                },
+                labels: function() {
+                    // labels get concatenated to comma delimited string
+                    return githubIssue.labels.length > 0 && githubIssue.labels.map(function(label) {
+                        return label.name;
+                    }).join(', ');
+                }
+            };
 
-            issues.sortUpdates();
-            return issues;
+            // add attributes
+            issue.attr(_.reduce(attributes, function(memo, next, key) {
+                var value = next();
+                if (value) { memo[key] = value; }
+                return memo;
+            }, attr));
+
+            // handle comments
+            _.each(githubIssue.comments, function(comment) {
+                issue.update({
+                    body: comment.body,
+                    modifier: comment.user.login,
+                    modified: helper.dateStringToIso(comment.updated_at), // jshint ignore:line
+                    type: 'comment'
+                });
+            });
+
+            // handle events
+            _.each(githubIssue.events, function(evt) {
+
+                var issueNo = githubIssue.number;
+                var update = {
+                    body: undefined,
+                    modifier: evt.actor.login,
+                    modified: helper.dateStringToIso(evt.created_at), // jshint ignore:line
+                    type: 'event'
+                };
+
+                var handlers = {
+                    closed: function() {
+                        return 'status: closed';
+                    },
+                    reopened: function() {
+                        return 'status: reopened'; /* evt.actor.login */
+                    },
+                    merged: function() {
+                        return 'status: merged'; /* evt.actor.login */
+                    },
+                    locked: function() {
+                        return 'locking: locked'; /* evt.actor.login */
+                    },
+                    unlocked: function() {
+                        return 'locking: unlocked'; /* evt.actor.login */
+                    },
+                    subscribed: function(evt) {
+                        return 'subscribed: ' + evt.actor.login;
+                    },
+                    mentioned: function(evt) {
+                        return 'mentioned: ' + evt.actor.login;
+                    },
+                    assigned: function(evt) {
+                        return 'assigned: ' + evt.assignee.login;
+                    },
+                    unassigned: function(evt) {
+                        return 'unassigned: ' + evt.assignee.login;
+                    },
+                    labeled: function(evt) {
+                        return 'added label: ' + evt.label.name; /* evt.label.color */
+                    },
+                    unlabeled: function(evt) {
+                        return 'removed label: ' + evt.label.name; /* evt.label.color */
+                    },
+                    milestoned: function(evt) {
+                        return 'added milestone: ' + evt.milestone.title;
+                    },
+                    demilestoned: function(evt) {
+                        return 'removed milestone: ' + evt.milestone.title;
+                    },
+                    renamed: function(evt) {
+                        return 'renamed issue: ' + evt.rename.to; /* evt.rename.from */
+                    },
+                    head_ref_deleted: function() { // jshint ignore:line
+                        return 'branch: deleted';
+                    },
+                    head_ref_restored: function() { // jshint ignore:line
+                        return 'branch: restored';
+                    },
+                    referenced: function() {
+                        update.type = 'reference';
+                        return 'The issue was referenced from a commit message';
+                    },
+                    // synthesised events
+                    pull_request: function() { // jshint ignore:line
+                        update.type = 'pull-request';
+                        return 'pull request opened';
+                    },
+                    update: function() { // jshint ignore:line
+                        update.type = 'edit';
+                        return 'update to issue';
+                    }
+                };
+
+                if (!!handlers[evt.event]) {
+                    update.body = handlers[evt.event](evt);
+                }
+
+                issue.filter('number', issueNo + '')
+                    .update(update);
+
+            });
+
+            // sort comments and events
+            issue.sortUpdates();
+
+            return issue;
 
         }
 

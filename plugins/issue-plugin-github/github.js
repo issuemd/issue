@@ -2,175 +2,16 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper, issuemd) {
+    module.exports = function (issueConfig, helper) {
 
         var localConfig = issueConfig();
         var api = require('./api.js')(localConfig, helper);
         var _ = require('underscore');
         var Q = require('q');
 
-
-
-
         // ******************************************
         // ISSUEMD GITHUB FUNCTIONS
         // ******************************************
-
-        issuemd.fn.addGithubComment = function (issueNo, comment) {
-
-            this.filter('number', issueNo + '')
-                .update({
-                    body: comment.body,
-                    modifier: comment.user.login,
-                    modified: helper.dateStringToIso(comment.updated_at), // jshint ignore:line
-                    type: 'comment'
-                });
-
-        };
-
-        issuemd.fn.addGithubEvent = function (issueNo, evt) {
-
-            var update = {
-                body: undefined,
-                modifier: evt.actor.login,
-                modified: helper.dateStringToIso(evt.created_at), // jshint ignore:line
-                type: 'event'
-            };
-
-            var handlers = {
-                closed: function () {
-                    return 'status: closed';
-                },
-                reopened: function () {
-                    return 'status: reopened'; /* evt.actor.login */
-                },
-                merged: function () {
-                    return 'status: merged'; /* evt.actor.login */
-                },
-                locked: function () {
-                    return 'locking: locked'; /* evt.actor.login */
-                },
-                unlocked: function () {
-                    return 'locking: unlocked'; /* evt.actor.login */
-                },
-                subscribed: function (evt) {
-                    return 'subscribed: ' + evt.actor.login;
-                },
-                mentioned: function (evt) {
-                    return 'mentioned: ' + evt.actor.login;
-                },
-                assigned: function (evt) {
-                    return 'assigned: ' + evt.assignee.login;
-                },
-                unassigned: function (evt) {
-                    return 'unassigned: ' + evt.assignee.login;
-                },
-                labeled: function (evt) {
-                    return 'added label: ' + evt.label.name; /* evt.label.color */
-                },
-                unlabeled: function (evt) {
-                    return 'removed label: ' + evt.label.name; /* evt.label.color */
-                },
-                milestoned: function (evt) {
-                    return 'added milestone: ' + evt.milestone.title;
-                },
-                demilestoned: function (evt) {
-                    return 'removed milestone: ' + evt.milestone.title;
-                },
-                renamed: function (evt) {
-                    return 'renamed issue: ' + evt.rename.to; /* evt.rename.from */
-                },
-                head_ref_deleted: function () { // jshint ignore:line
-                    return 'branch: deleted';
-                },
-                head_ref_restored: function () { // jshint ignore:line
-                    return 'branch: restored';
-                },
-                referenced: function () {
-                    update.type = 'reference';
-                    return 'The issue was referenced from a commit message';
-                },
-                // synthesised events
-                pull_request: function () { // jshint ignore:line
-                    update.type = 'pull-request';
-                    return 'pull request opened';
-                },
-                update: function () { // jshint ignore:line
-                    update.type = 'edit';
-                    return 'update to issue';
-                }
-            };
-
-            if (!!handlers[evt.event]) {
-                update.body = handlers[evt.event](evt);
-            }
-
-            this.filter('number', issueNo + '')
-                .update(update);
-
-        };
-
-        issuemd.fn.addFromGithubJson = function (gitIssue) {
-
-            var issue = issuemd({
-
-                title: gitIssue.title,
-                creator: helper.personFromParts({
-                    username: gitIssue.user.login
-                }),
-                created: helper.dateStringToIso(gitIssue.created_at), // jshint ignore:line
-                body: gitIssue.body,
-
-            });
-
-            var attr = {};
-
-            // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
-            var repoName = gitIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1];
-
-            if (repoName) {
-                attr.project = repoName;
-            }
-
-            var attributes = {
-                status: 'state',
-                number: 'number',
-                locked: 'locked',
-                assignee: function () {
-                    return gitIssue.assignee && gitIssue.assignee.login;
-                },
-                updated: function () {
-                    return helper.dateStringToIso(gitIssue.updated_at); // jshint ignore:line
-                },
-                pull_request_url: function () { // jshint ignore:line
-                    return gitIssue.pull_request && gitIssue.pull_request.url; // jshint ignore:line
-                },
-                milestone: function () {
-                    return gitIssue.milestone && gitIssue.milestone.title;
-                },
-                closed: function () {
-                    return gitIssue.closed && helper.dateStringToIso(gitIssue.closed_at); // jshint ignore:line
-                },
-                labels: function () {
-                    // labels get concatenated to comma delimited string
-                    return gitIssue.labels.length > 0 && gitIssue.labels.map(function (label) {
-                        return label.name;
-                    }).join(', ');
-                }
-            };
-
-            for (var i in attributes) {
-                var value = typeof attributes[i] === 'function' ? attributes[i]() : gitIssue[attributes[i]];
-                if (!!value) {
-                    attr[i] = value;
-                }
-            }
-
-            issue.attr(attr);
-
-            this.merge(issue);
-
-        };
 
         return {
             // api proxies
@@ -188,13 +29,10 @@
             nextPageUrl: nextPageUrl,
             autoDetectRepo: autoDetectRepo,
             pages: pages
-                // fetchNextPage!!
-                // TODO: decide how to re-implement personal issues
-                // listPersonalIssues: api.getPersonalIssues,
+            // fetchNextPage!!
+            // TODO: decide how to re-implement personal issues
+            // listPersonalIssues: api.getPersonalIssues,
         };
-
-
-
 
         // ******************************************
         // LOGOUT
