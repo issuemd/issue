@@ -173,22 +173,24 @@
         };
 
         return {
+            // api proxies
             rateLimit: api.rateLimit,
-            removeCredentials: removeCredentials,
-            createToken: api.createAuthToken,
-            removeToken: api.revokeAuthToken,
-            getTokens: api.getAuthTokens,
-            generateTokenName: generateTokenName,
-            writeGithubToken: writeGithubToken,
-            login: login,
             searchRepository: api.searchRepositories,
-            nextPageUrl: nextPageUrl,
             nextPage: api.nextPage,
-            autoDetectRepo: autoDetectRepo,
             listIssues: api.getIssues,
-            listPersonalIssues: listPersonalIssues,
+            searchIssues: api.searchIssues,
+            // api calling methods
             fetchIssue: fetchIssue,
-            searchIssues: api.searchIssues
+            login: login,
+            // helpers
+            generateTokenName: generateTokenName,
+            removeCredentials: removeCredentials,
+            nextPageUrl: nextPageUrl,
+            autoDetectRepo: autoDetectRepo,
+            pages: pages
+                // fetchNextPage!!
+                // TODO: decide how to re-implement personal issues
+                // listPersonalIssues: api.getPersonalIssues,
         };
 
 
@@ -249,23 +251,13 @@
 
         }
 
-
-
-
-
         // ******************************************
         // ISSUES
         // ******************************************
 
-        function listPersonalIssues(filters) {
-            return api.getPersonalIssues(filters);
-        }
-
         function fetchIssue(user, repository, number) {
 
-            return api.getIssue(user, repository, number).then(getCommentsAndEvents);
-
-            function getCommentsAndEvents(response) {
+            return api.getIssue(user, repository, number).then(function (response) {
 
                 var issue = response.data;
 
@@ -320,11 +312,9 @@
 
                 });
 
-            }
+            });
 
         }
-
-
 
         // ******************************************
         // HELPERS
