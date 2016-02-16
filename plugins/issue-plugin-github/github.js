@@ -172,14 +172,12 @@
 
         };
 
-
-
         return {
-            rateLimit: rateLimit,
+            rateLimit: api.rateLimit,
             removeCredentials: removeCredentials,
-            createToken: createToken,
-            removeToken: removeToken,
-            getTokens: getTokens,
+            createToken: api.createAuthToken,
+            removeToken: api.revokeAuthToken,
+            getTokens: api.getAuthTokens,
             generateTokenName: generateTokenName,
             writeGithubToken: writeGithubToken,
             login: login,
@@ -187,23 +185,12 @@
             nextPageUrl: nextPageUrl,
             nextPage: api.nextPage,
             autoDetectRepo: autoDetectRepo,
-            listIssues: listIssues,
+            listIssues: api.getIssues,
             listPersonalIssues: listPersonalIssues,
             fetchIssue: fetchIssue,
-            searchIssues: searchIssues
+            searchIssues: api.searchIssues
         };
 
-        // ******************************************
-        // RATE LIMIT
-        // ******************************************
-
-        function rateLimit() {
-
-            return api.rateLimit().then(function (response) {
-                return response.data.resources;
-            });
-
-        }
 
 
 
@@ -212,72 +199,18 @@
         // ******************************************
 
         function removeCredentials() {
-            var deferred = Q.defer();
             try {
                 issueConfig('plugins.github.authToken', '', true);
                 issueConfig('plugins.github.authTokenId', '', true);
-                deferred.resolve();
+                return Q.resolve();
             } catch (e) {
-                deferred.reject(e);
+                return Q.reject(e);
             }
-            return deferred.promise;
         }
-
-
 
         // ******************************************
         // LOGIN
         // ******************************************
-
-        function createToken(username, password, token) {
-            var deferred = Q.defer();
-            var scopes = ['user', 'repo', 'gist'];
-
-            api.createAuthToken(username, password, scopes, token)
-                .then(function (response) {
-                    deferred.resolve(response.data);
-                })
-                .fail(function (error) {
-                    deferred.reject({
-                        error: error.error,
-                        message: error.message
-                    });
-                });
-
-            return deferred.promise;
-        }
-
-        function getTokens(username, password) {
-            var deferred = Q.defer();
-
-            api.getAuthTokens(username, password)
-                .then(function (response) {
-                    deferred.resolve(response.data);
-                })
-                .fail(function (error) {
-                    deferred.reject(error);
-                });
-
-            return deferred.promise;
-        }
-
-        function removeToken(username, password, tokenId) {
-            var deferred = Q.defer();
-
-            if (!tokenId) {
-                deferred.resolve({});
-            } else {
-                api.revokeAuthToken(username, password, tokenId)
-                    .then(function (response) {
-                        deferred.resolve(response);
-                    })
-                    .fail(function (error) {
-                        deferred.reject(error);
-                    });
-            }
-
-            return deferred.promise;
-        }
 
         function generateTokenName(username, hostname) {
             return 'issuemd/issue-' + username + '@' + hostname;
@@ -295,103 +228,34 @@
 
         function login(username, password, tokenName) {
 
-            var deferred = Q.defer();
-
-            getTokens(username, password)
+            return api.getAuthTokens(username, password)
                 .then(function (tokens) {
 
                     var token = _.find(tokens, function (auth) {
                         return auth.note === tokenName;
                     });
 
-                    return (token && token.id) ? token.id : undefined;
+                    var tokenId = token && token.id;
 
-                })
-                .then(function (tokenId) {
+                    return api.revokeAuthToken(username, password, tokenId);
 
-                    removeToken(username, password, tokenId)
-                        .then(function () {
-
-                            createToken(username, password, tokenName)
-                                .then(function (loginData) {
-
-                                    writeGithubToken(loginData.token, loginData.id)
-                                        .then(function () {
-                                            deferred.resolve('Login Success!');
-                                        })
-                                        .fail(deferred.reject);
-
-                                })
-                                .fail(function (error) {
-                                    deferred.reject({
-                                        error: error.error,
-                                        message: error.message
-                                    });
-                                });
-                        })
-                        .fail(function (error) {
-                            deferred.reject({
-                                error: error.error,
-                                message: error.message
-                            });
-                        });
-
-                })
-                .fail(function (error) {
-                    deferred.reject({
-                        error: error.error,
-                        message: error.message
-                    });
+                }).then(function () {
+                    return api.createAuthToken(username, password, tokenName);
+                }).then(function (loginData) {
+                    return writeGithubToken(loginData.token, loginData.id);
+                }).then(function () {
+                    return 'Login Success!';
                 });
 
-            return deferred.promise;
         }
 
 
-
-        // ******************************************
-        // ISSUES SEARCH
-        // ******************************************
-
-        function searchIssues(searchTerm, repo, filters) {
-
-            var deferred = Q.defer();
-
-            api.searchIssues(searchTerm, repo, filters)
-                .then(function (response) {
-                    deferred.resolve(response);
-                })
-                .fail(function (error) {
-                    deferred.reject({
-                        error: error.error,
-                        message: error.message
-                    });
-                });
-
-            return deferred.promise;
-
-        }
 
 
 
         // ******************************************
         // ISSUES
         // ******************************************
-
-        function listIssues(user, repository, filters) {
-
-            var deferred = Q.defer();
-
-            if (!user || !repository) {
-                var warning = helper.chalk.gray('You must specifiy user/organization and repository name...');
-                deferred.reject(warning);
-            } else {
-                return api.getIssues(user, repository, filters);
-            }
-
-            return deferred.promise;
-
-        }
 
         function listPersonalIssues(filters) {
             return api.getPersonalIssues(filters);
@@ -495,7 +359,7 @@
             }
 
             return urls;
-            
+
         }
 
         function autoDetectRepo(configRepo, configAutoDectect, configGitRemote) {

@@ -43,7 +43,7 @@ module.exports = function () {
             return ajaxWrapper(url);
         }
 
-        function createAuthToken(username, password, scopes, tokenName) {
+        function createAuthToken(username, password, tokenName) {
 
             var url = '/authorizations';
 
@@ -54,17 +54,21 @@ module.exports = function () {
             options.headers.Authorization = 'Basic ' + helper.toBase64(username + ':' + password);
 
             var body = {
-                scopes: scopes,
+                scopes: ['user', 'repo', 'gist'],
                 note: tokenName
             };
 
-            return ajaxWrapper(url, options, body);
+            return ajaxWrapper(url, options, body).then(function (response) {
+                return response.data;
+            });
 
         }
 
         function rateLimit() {
             var url = '/rate_limit';
-            return ajaxWrapper(url);
+            return ajaxWrapper(url).then(function (response) {
+                return response.data.resources;
+            });
         }
 
         function revokeAuthToken(username, password, tokenId) {
@@ -77,7 +81,7 @@ module.exports = function () {
             options.headers = options.headers || {};
             options.headers.Authorization = 'Basic ' + helper.toBase64(username + ':' + password);
 
-            return ajaxWrapper(url, options);
+            return !tokenId ? Q.resolve({}) : ajaxWrapper(url, options);
 
         }
 
@@ -90,7 +94,9 @@ module.exports = function () {
             options.headers = options.headers || {};
             options.headers.Authorization = 'Basic ' + helper.toBase64(username + ':' + password);
 
-            return ajaxWrapper(url, options);
+            return ajaxWrapper(url, options).then(function (response) {
+                return response.data;
+            });
 
         }
 

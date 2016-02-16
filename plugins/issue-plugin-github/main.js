@@ -25,9 +25,7 @@
             var loadMore = config.answer || 'ask';
 
             var commands = {
-                limit: function () {
-                    return limit();
-                },
+                limit: limit,
                 login: function () {
                     return login(config.params[0], config.params[1]);
                 },
@@ -373,6 +371,10 @@
                 return github.listIssues(repo.namespace, repo.id, filters).then(showSuccess);
             } else if (!!repo && config.params.length === 1) {
                 return github.fetchIssue(repo.namespace, repo.id, config.params[0]).then(showIssueSuccess);
+            } else {
+                return Q.reject({
+                    message: helper.chalk.gray('You must specifiy user/organization and repository name...')
+                });
             }
 
         }
