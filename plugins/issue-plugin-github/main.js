@@ -4,16 +4,17 @@
 
     module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
-        var hostname = require('os').hostname();
-
         var _ = require('underscore'),
             handleExport = require('./export')(issueConfig, helper, issuemd),
-            show = require('./show')(issueConfig, helper, issuemd, issueTemplates);
+            show = require('./show')(issueConfig, helper, issuemd, issueTemplates),
+            limit = require('./limit')(issueConfig, helper, issuemd),
+            login = require('./login')(issueConfig, helper, issuemd),
+            search = require('./search')(issueConfig, helper, issuemd, issueTemplates),
+            locate = require('./locate')(issueConfig, helper, issuemd);
 
         var github = require('./github.js')(issueConfig, helper, issuemd, issueTemplates);
 
         var localConfig = issueConfig(),
-            templates = issueTemplates(helper.chalk),
             filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']),
             stderr = [];
 
@@ -23,16 +24,14 @@
                 stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
             }
 
-            var loadMore = config.answer || 'ask';
-
             var commands = {
                 limit: limit,
-                login: _.partial(login, config.params[0], config.params[1]),
+                login: _.partial(login, config),
                 logout: github.removeCredentials,
                 locate: _.partial(locate, config, filters),
-                search: _.partial(search, config, filters, loadMore),
-                show: _.partial(show, config, command),
-                export: _.partial(handleExport, config, issuemd, helper)
+                search: _.partial(search, config, filters),
+                show: _.partial(show, config),
+                export: _.partial(handleExport, config)
             };
 
             commands.list = commands.show;
@@ -92,143 +91,6 @@
         ].join('\n');
 
         return githubCli;
-
-        // ******************************************
-        // LIMIT
-        // ******************************************
-
-        function limit() {
-
-            var w = helper.chalk.white;
-            var g = helper.chalk.green;
-
-            return github.rateLimit().then(function (rateLimits) {
-                return {
-                    stderr: stderr,
-                    stdout: _.map(rateLimits, function (value, name) {
-                        return w(name + ' requests: ') + colorLimit(value.remaining, value.limit) + w('/' + value.limit + ', resets in: ') + g(getMinutes(value.reset)) + w(' mins');
-                    }).join('\n')
-                };
-            });
-
-            function colorLimit(value, limit) {
-
-                var color;
-
-                var currentState = value / limit;
-
-                if (currentState < 0.33) {
-                    color = helper.chalk.red;
-                } else if (currentState < 0.66) {
-                    color = helper.chalk.yellow;
-                } else {
-                    color = helper.chalk.green;
-                }
-
-                return color(value);
-
-            }
-
-            function getMinutes(date) {
-                return Math.ceil((date * 1000 - new Date()) / 1000 / 60);
-            }
-
-        }
-
-        // ******************************************
-        // LOGIN
-        // ******************************************
-
-        function login(username, password) {
-
-            // first logout, which ensures userconfig is writable
-            return github.removeCredentials().then(function () {
-                // if somebody already typed in username and password
-                return helper.captureCredentials(username, password);
-            }).then(function (credentials) {
-                return github.login(credentials.username, credentials.password, github.generateTokenName(credentials.username, hostname));
-            }).then(function (result) {
-                return {
-                    stderr: result
-                };
-            });
-
-        }
-
-        // ******************************************
-        // SEARCH
-        // ******************************************
-
-        function locate(config, filters) {
-            return github.searchRepository(config.params[0], filters).then(locateSuccess);
-        }
-
-        function locateSuccess(response) {
-
-            var result = response.data,
-                red = helper.chalk.red,
-                grey = helper.chalk.grey,
-                pages = github.nextPageUrl(response);
-
-            var stdout = _.map(result.items, function (repo) {
-                return repo.owner.login + grey('/') + red(repo.name) + grey(' \u2606 ' + repo.stargazers_count); // jshint ignore:line
-            }).join('\n');
-
-            return {
-                stderr: stderr,
-                stdout: stdout,
-                next: pages.next && function () {
-                    return github.nextPage(pages.next.url).then(locateSuccess);
-                }
-            };
-
-        }
-
-        function search(config, filters) {
-            var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
-            return github.searchIssues(config.params[0], repo, filters).then(searchSuccess);
-        }
-
-        function searchSuccess(response) {
-
-            var data = response.data.items,
-                issues = issuemd(),
-                githubIssues = _.isArray(data) ? data : [data],
-                g = helper.chalk.green,
-                pages = github.nextPageUrl(response),
-                stdout;
-
-            _.each(githubIssues, function (githubIssue) {
-
-                var issue = issuemd({})
-                    .attr({
-                        title: githubIssue.title,
-                        creator: helper.personFromParts({
-                            username: githubIssue.user.login
-                        }),
-                        created: helper.dateStringToIso(githubIssue.created_at), // jshint ignore:line
-                        body: githubIssue.body,
-                        id: githubIssue.number,
-                        assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
-                        status: githubIssue.state || ''
-                    });
-
-                issues.merge(issue);
-
-            });
-
-            stdout = issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(_.pick(localConfig, 'dim')));
-            stdout += 'Total results: ' + g(response.data.total_count); // jshint ignore:line
-
-            return {
-                stderr: stderr,
-                stdout: stdout,
-                next: pages.next && function () {
-                    return github.nextPage(pages.next.url).then(searchSuccess);
-                }
-            };
-
-        }
 
     };
 
