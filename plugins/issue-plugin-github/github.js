@@ -29,9 +29,9 @@
             nextPageUrl: nextPageUrl,
             autoDetectRepo: autoDetectRepo,
             pages: pages
-            // fetchNextPage!!
-            // TODO: decide how to re-implement personal issues
-            // listPersonalIssues: api.getPersonalIssues,
+                // fetchNextPage!!
+                // TODO: decide how to re-implement personal issues
+                // listPersonalIssues: api.getPersonalIssues,
         };
 
         // ******************************************
