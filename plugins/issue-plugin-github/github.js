@@ -22,10 +22,7 @@
             searchIssues: api.searchIssues,
             // api calling methods
             fetchIssue: fetchIssue,
-            login: login,
             // helpers
-            generateTokenName: generateTokenName,
-            removeCredentials: removeCredentials,
             nextPageUrl: nextPageUrl,
             autoDetectRepo: autoDetectRepo,
             pages: pages
@@ -33,61 +30,6 @@
                 // TODO: decide how to re-implement personal issues
                 // listPersonalIssues: api.getPersonalIssues,
         };
-
-        // ******************************************
-        // LOGOUT
-        // ******************************************
-
-        function removeCredentials() {
-            try {
-                issueConfig('plugins.github.authToken', '', true);
-                issueConfig('plugins.github.authTokenId', '', true);
-                return Q.resolve();
-            } catch (e) {
-                return Q.reject(e);
-            }
-        }
-
-        // ******************************************
-        // LOGIN
-        // ******************************************
-
-        function generateTokenName(username, hostname) {
-            return 'issuemd/issue-' + username + '@' + hostname;
-        }
-
-        function writeGithubToken(token, tokenId) {
-            try {
-                issueConfig('plugins.github.authToken', token, true);
-                issueConfig('plugins.github.authTokenId', tokenId, true);
-                return Q.resolve();
-            } catch (e) {
-                return Q.reject(e);
-            }
-        }
-
-        function login(username, password, tokenName) {
-
-            return api.getAuthTokens(username, password)
-                .then(function (tokens) {
-
-                    var token = _.find(tokens, function (auth) {
-                        return auth.note === tokenName;
-                    });
-
-                    var tokenId = token && token.id;
-
-                    return api.revokeAuthToken(username, password, tokenId);
-
-                }).then(function () {
-                    return api.createAuthToken(username, password, tokenName);
-                }).then(function (loginData) {
-                    return writeGithubToken(loginData.token, loginData.id);
-                }).then(function () {
-                    return 'Login Success!';
-                });
-
-        }
 
         // ******************************************
         // ISSUES

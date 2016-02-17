@@ -1,12 +1,21 @@
-(function () {
+(function() {
 
     'use strict';
 
-    module.exports = function (issueConfig, helper, issuemd) {
+    module.exports = function(issueConfig) {
 
-        var github = require('../github.js')(issueConfig, helper, issuemd);
+        var Q = require('q');
 
-        return github.removeCredentials;
+        return function() {
+            try {
+                issueConfig('plugins.github.authToken', '', true);
+                issueConfig('plugins.github.authTokenId', '', true);
+                return Q.resolve();
+            } catch (e) {
+                return Q.reject(e);
+            }
+        };
+
     };
 
 })();
