@@ -1,62 +1,49 @@
 'use strict';
 
-! function () {
+! function() {
 
-    module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
+    module.exports = function(issueConfig, helper, issuemd, issueTemplates) {
 
-        var _ = require('underscore'),
-            handleExport = require('./export')(issueConfig, helper, issuemd),
-            show = require('./show')(issueConfig, helper, issuemd, issueTemplates),
-            limit = require('./limit')(issueConfig, helper, issuemd),
-            login = require('./login')(issueConfig, helper, issuemd),
-            search = require('./search')(issueConfig, helper, issuemd, issueTemplates),
-            locate = require('./locate')(issueConfig, helper, issuemd);
-
-        var github = require('./github.js')(issueConfig, helper, issuemd, issueTemplates);
+        var _ = require('underscore');
 
         var localConfig = issueConfig(),
             filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']),
             stderr = [];
 
-        var githubCli = function (config, command) {
+        var githubCli = function(config, command) {
 
             if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
                 stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
             }
 
-            var commands = {
-                limit: limit,
-                login: _.partial(login, config),
-                logout: github.removeCredentials,
-                locate: _.partial(locate, config, filters),
-                search: _.partial(search, config, filters),
-                show: _.partial(show, config),
-                export: _.partial(handleExport, config)
-            };
+            // alias the `list` command to `show`
+            if (command === 'list') { command = 'show'; }
 
-            commands.list = commands.show;
-
-            if (commands[command]) {
-                return commands[command]();
-            } else {
-                return config.help ? githubCli.helptext : [
-                    'Unknown command... try:',
-                    '',
-                    '  issue github --help',
-                    '',
-                    'Usage:',
-                    '',
-                    '  issue github list mine',
-                    '  issue github list --repo <namespace/project>',
-                    '  issue github show --repo <namespace/project> <id>',
-                    '',
-                    'Example:',
-                    '',
-                    '  issue github show --repo victorquinn/chancejs 207',
-                    ''
-                ].join('\n');
+            try {
+                // try to require the module, passing initialisation methods, then run with config and filters
+                return require('./' + command)(issueConfig, helper, issuemd, issueTemplates)(config, filters);
+            } catch (e) {
+                if (e.code === 'MODULE_NOT_FOUND') {
+                    return config.help ? githubCli.helptext : [
+                        'Unknown command... try:',
+                        '',
+                        '  issue github --help',
+                        '',
+                        'Usage:',
+                        '',
+                        '  issue github list mine',
+                        '  issue github list --repo <namespace/project>',
+                        '  issue github show --repo <namespace/project> <id>',
+                        '',
+                        'Example:',
+                        '',
+                        '  issue github show --repo victorquinn/chancejs 207',
+                        ''
+                    ].join('\n');
+                } else {
+                    console.error(e);
+                }
             }
-
 
         };
 
