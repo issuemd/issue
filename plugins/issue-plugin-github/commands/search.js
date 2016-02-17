@@ -6,7 +6,7 @@
 
     module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
-        var github = require('./github.js')(issueConfig, helper, issuemd);
+        var github = require('../github.js')(issueConfig, helper, issuemd);
 
         return search;
 

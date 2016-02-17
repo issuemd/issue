@@ -5,7 +5,7 @@
     module.exports = function (issueConfig, helper, issuemd) {
 
         var hostname = require('os').hostname(),
-            github = require('./github.js')(issueConfig, helper, issuemd);
+            github = require('../github.js')(issueConfig, helper, issuemd);
 
         return login;
 

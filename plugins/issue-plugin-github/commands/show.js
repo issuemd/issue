@@ -7,8 +7,8 @@
 
     module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
-        var issueFromApiJson = _.partial(require('./json-to-issuemd'), issuemd, helper);
-        var github = require('./github.js')(issueConfig, helper, issuemd);
+        var issueFromApiJson = _.partial(require('../json-to-issuemd'), issuemd, helper);
+        var github = require('../github.js')(issueConfig, helper, issuemd);
 
         return show;
 

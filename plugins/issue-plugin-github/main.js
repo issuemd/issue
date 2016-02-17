@@ -21,7 +21,7 @@
 
             try {
                 // try to require the module, passing initialisation methods, then run with config and filters
-                return require('./' + command)(issueConfig, helper, issuemd, issueTemplates)(config, filters);
+                return require('./commands/' + command)(issueConfig, helper, issuemd, issueTemplates)(config, filters);
             } catch (e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
                     return config.help ? githubCli.helptext : [
