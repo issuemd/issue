@@ -2,12 +2,12 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper) {
+    module.exports = function (issueConfig, helper, issuemd) {
 
         var localConfig = issueConfig();
         var api = require('./api.js')(localConfig, helper);
-        var _ = require('underscore');
         var Q = require('q');
+        var issueFromApiJson = require('./json-to-issuemd');
 
         // ******************************************
         // ISSUEMD GITHUB FUNCTIONS
@@ -15,20 +15,18 @@
 
         return {
             // api proxies
-            rateLimit: api.rateLimit,
             searchRepository: api.searchRepositories,
             nextPage: api.nextPage,
-            listIssues: api.getIssues,
             searchIssues: api.searchIssues,
             // api calling methods
             fetchIssue: fetchIssue,
             // helpers
+            pages: pages,
             nextPageUrl: nextPageUrl,
             autoDetectRepo: autoDetectRepo,
-            pages: pages
-                // fetchNextPage!!
-                // TODO: decide how to re-implement personal issues
-                // listPersonalIssues: api.getPersonalIssues,
+            // fetchNextPage!!
+            // TODO: decide how to re-implement personal issues
+            // listPersonalIssues: api.getPersonalIssues,
         };
 
         // ******************************************
@@ -88,7 +86,10 @@
 
                     }
 
-                    return issue;
+                    return {
+                        response: response,
+                        issues: issueFromApiJson(issuemd, helper, issue)
+                    };
 
                 });
 
@@ -108,19 +109,19 @@
 
             function success(response) {
                 data = data.concat(response.data);
-                var pages = nextPageUrl(response);
+                var pages = nextPageUrl(response.headers.link);
                 return pages.next && api.nextPage(pages.next.url).then(success) || data;
             }
 
         }
 
-        function nextPageUrl(response) {
+        function nextPageUrl(link) {
 
             var urls = {};
 
-            if (response.headers && response.headers.link) {
+            if (link) {
                 // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
-                response.headers.link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, function (_, url, page, name) {
+                link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, function (_, url, page, name) {
                     urls[name] = {
                         url: url,
                         page: page * 1

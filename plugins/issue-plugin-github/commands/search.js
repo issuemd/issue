@@ -21,7 +21,7 @@
                 issues = issuemd(),
                 githubIssues = _.isArray(data) ? data : [data],
                 g = helper.chalk.green,
-                pages = github.nextPageUrl(response),
+                pages = github.nextPageUrl(response.headers.link),
                 templates = issueTemplates(helper.chalk),
                 localConfig = issueConfig(),
                 stdout;

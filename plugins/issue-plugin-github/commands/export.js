@@ -7,8 +7,8 @@
 
     module.exports = function (issueConfig, helper, issuemd) {
 
-        var issueFromApiJson = _.partial(require('../json-to-issuemd'), issuemd, helper);
-        var github = require('../github.js')(issueConfig, helper, issuemd);
+        var api = require('../api.js')(issueConfig(), helper),
+            github = require('../github.js')(issueConfig, helper, issuemd);
 
         return handleExport;
 
@@ -22,7 +22,7 @@
 
             var issueList = [];
 
-            github.listIssues(repo.namespace, repo.id, filters)
+            api.getIssues(repo.namespace, repo.id, filters)
                 .then(github.pages)
                 .then(function (response) {
 
@@ -31,7 +31,6 @@
                     }));
 
                     var stale = [];
-
                     _.each(issueList, function (issueInfo) {
 
                         var path = require('path'),
@@ -61,7 +60,7 @@
                     return limitEach(stale, config.throttle, function (issueId, cb) {
                         github.fetchIssue(repo.namespace, repo.id, issueId, filters)
                             .then(function (response) {
-                                writeIssueToDisk(issueFromApiJson(response));
+                                writeIssueToDisk(response.issues);
                                 cb();
                             });
                     });

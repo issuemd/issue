@@ -4,9 +4,9 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issueConfig, helper, issuemd) {
+    module.exports = function (issueConfig, helper) {
 
-        var github = require('../github.js')(issueConfig, helper, issuemd);
+        var api = require('../api.js')(issueConfig(), helper);
 
         return limit;
 
@@ -15,7 +15,7 @@
             var w = helper.chalk.white;
             var g = helper.chalk.green;
 
-            return github.rateLimit().then(function (rateLimits) {
+            return api.rateLimit().then(function (rateLimits) {
                 return {
                     stdout: _.map(rateLimits, function (value, name) {
                         return w(name + ' requests: ') + colorLimit(value.remaining, value.limit) + w('/' + value.limit + ', resets in: ') + g(getMinutes(value.reset)) + w(' mins');

@@ -17,10 +17,10 @@
             plugins = require('./issue-plugins.js')(issueConfig, helper),
             cliParams = issueConfig().params;
 
-        bannerHandler(config, helper, fs, src);
-
         // grab the main command, which should be a plugin name to handle sub-commands
         var command = cliParams[0];
+
+        bannerHandler(config, helper, fs, src);
 
         if (command === 'config') {
             commandConfig(cliParams, issueConfig, helper, !!config.userhome);
@@ -60,6 +60,7 @@
             } else if (!!plugins[command]) {
                 cliParams.shift();
                 var subCommand = cliParams.shift();
+                issueConfig('command', subCommand);
                 return plugins[command](config, subCommand);
             } else if (plugins[command] === false) {
                 return 'The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n';

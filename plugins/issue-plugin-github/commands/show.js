@@ -7,8 +7,8 @@
 
     module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
-        var issueFromApiJson = _.partial(require('../json-to-issuemd'), issuemd, helper);
-        var github = require('../github.js')(issueConfig, helper, issuemd);
+        var api = require('../api.js')(issueConfig(), helper),
+            github = require('../github.js')(issueConfig, helper, issuemd);
 
         return show;
 
@@ -21,7 +21,7 @@
             // $ issue github --repo moment/moment search
             // $ issue github --repo moment/moment search 2805
             if (!!repo && config.params.length === 0) {
-                return github.listIssues(repo.namespace, repo.id, filters).then(showSuccess);
+                return api.getIssues(repo.namespace, repo.id, filters).then(showSuccess);
             } else if (!!repo && config.params.length === 1) {
                 return github.fetchIssue(repo.namespace, repo.id, config.params[0]).then(showIssueSuccess);
             } else {
@@ -32,12 +32,12 @@
 
         }
 
-        function showIssueSuccess(response) {
+        function showIssueSuccess(result) {
 
-            var issues = issueFromApiJson(response),
+            var issues = result.issues,
                 localConfig = issueConfig(),
                 templateOptions = _.pick(localConfig, 'dim'),
-                pages = github.nextPageUrl(response),
+                pages = github.nextPageUrl(result.response.headers.link),
                 templates = issueTemplates(helper.chalk);
 
             return {
@@ -52,7 +52,7 @@
         function showSuccess(response) {
 
             var githubIssues = _.isArray(response.data) ? response.data : [response.data],
-                pages = github.nextPageUrl(response),
+                pages = github.nextPageUrl(response.headers.link),
                 localConfig = issueConfig(),
                 templates = issueTemplates(helper.chalk);
 
