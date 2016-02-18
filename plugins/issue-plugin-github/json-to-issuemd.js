@@ -4,12 +4,10 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issueConfig, helper, issuemd) {
+    module.exports = function (issueConfig, helper, api, issuemd) {
 
         return function (response) {
 
-            var localConfig = issueConfig();
-            var api = require('./api.js')(localConfig, helper);
             var Q = require('q');
             // var issueFromApiJson = require('./json-to-issuemd');
 

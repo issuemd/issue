@@ -5,10 +5,9 @@
     var _ = require('underscore'),
         Q = require('q');
 
-    module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
+    module.exports = function (issueConfig, helper, api, issuemd, issueTemplates) {
 
-        var api = require('../api.js')(issueConfig(), helper),
-            fetchIssue = require('../json-to-issuemd')(issueConfig, helper, issuemd);
+        var fetchIssue = require('../json-to-issuemd')(issueConfig, helper, api, issuemd);
 
         return show;
 

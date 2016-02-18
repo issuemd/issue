@@ -7,13 +7,17 @@
         var _ = require('underscore');
 
         var localConfig = issueConfig(),
-            filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']),
             stderr = [];
 
+        // TODO: why do we have localConfig and also pass config?
         var githubCli = function (config, command) {
 
+            var api = require('./api.js')(config, helper);
+
             // unless disabled, assueme autodetect is true
-            var githubrepo = autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
+            var githubrepo = autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote),
+                filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']);
+
             if (githubrepo) {
                 config.githubrepo = githubrepo;
             }
@@ -29,7 +33,7 @@
 
             try {
                 // try to require the module, passing initialisation methods, then run with config and filters
-                return require('./commands/' + command)(issueConfig, helper, issuemd, issueTemplates)(config, filters);
+                return require('./commands/' + command)(issueConfig, helper, api, issuemd, issueTemplates)(config, filters);
             } catch (e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
                     return config.help ? githubCli.helptext : [

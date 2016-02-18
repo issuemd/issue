@@ -2,17 +2,14 @@
 
     'use strict';
 
-    module.exports = function (issueConfig, helper) {
+    module.exports = function (issueConfig, helper, api) {
 
         var hostname = require('os').hostname(),
             _ = require('underscore'),
             Q = require('q'),
-            api = require('../api.js')(issueConfig(), helper),
             logout = require('./logout.js')(issueConfig);
 
-        return login;
-
-        function login(config) {
+        return function (config) {
 
             // TODO: replace this functionality - rely on --username and --password
             var username = config.params[0],
@@ -30,7 +27,7 @@
                 };
             });
 
-        }
+        };
 
         function generateTokenName(username, hostname) {
             return 'issuemd/issue-' + username + '@' + hostname;

@@ -2,10 +2,9 @@
 
     'use strict';
 
-    module.exports = function (issueConfig, helper) {
+    module.exports = function (issueConfig, helper, api) {
 
-        var _ = require('underscore'),
-            api = require('../api.js')(issueConfig(), helper);
+        var _ = require('underscore');
 
         return locate;
 

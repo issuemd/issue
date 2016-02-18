@@ -4,15 +4,11 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
+    module.exports = function (issueConfig, helper, api, issuemd, issueTemplates) {
 
-        var api = require('../api.js')(issueConfig(), helper);
-
-        return search;
-
-        function search(config, filters) {
+        return function (config, filters) {
             return api.searchIssues(config.params[0], config.githubrepo, filters).then(searchSuccess);
-        }
+        };
 
         function searchSuccess(response) {
 

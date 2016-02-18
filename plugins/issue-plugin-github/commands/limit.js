@@ -4,9 +4,7 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issueConfig, helper) {
-
-        var api = require('../api.js')(issueConfig(), helper);
+    module.exports = function (issueConfig, helper, api) {
 
         return limit;
 
