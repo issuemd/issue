@@ -8,22 +8,23 @@
     module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
         var api = require('../api.js')(issueConfig(), helper),
-            github = require('../github.js')(issueConfig, helper, issuemd);
+            fetchIssue = require('../json-to-issuemd')(issueConfig, helper, issuemd);
 
         return show;
 
         function show(config) {
 
-            // unless disabled, assueme autodetect is true
-            var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
             var filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
 
             // $ issue github --repo moment/moment search
             // $ issue github --repo moment/moment search 2805
-            if (!!repo && config.params.length === 0) {
-                return api.getIssues(repo.namespace, repo.id, filters).then(showSuccess);
-            } else if (!!repo && config.params.length === 1) {
-                return github.fetchIssue(repo.namespace, repo.id, config.params[0]).then(showIssueSuccess);
+            if (!!config.githubrepo && config.params.length === 0) {
+                return api.getIssues(config.githubrepo.namespace, config.githubrepo.id, filters)
+                    .then(showSuccess);
+            } else if (!!config.githubrepo && config.params.length === 1) {
+                return api.getIssue(config.githubrepo.namespace, config.githubrepo.id, config.params[0])
+                    .then(fetchIssue)
+                    .then(showIssueSuccess);
             } else {
                 return Q.reject({
                     message: helper.chalk.gray('You must specifiy user/organization and repository name...')
@@ -32,19 +33,14 @@
 
         }
 
-        function showIssueSuccess(result) {
+        function showIssueSuccess(issues) {
 
-            var issues = result.issues,
-                localConfig = issueConfig(),
+            var localConfig = issueConfig(),
                 templateOptions = _.pick(localConfig, 'dim'),
-                pages = github.nextPageUrl(result.response.headers.link),
                 templates = issueTemplates(helper.chalk);
 
             return {
-                stdout: issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions)),
-                next: pages.next && function () {
-                    return github.nextPage(pages.next.url).then(showSuccess);
-                }
+                stdout: issues.toString(localConfig.width, templates.issuesContentTableLayoutTechnicolor(templateOptions))
             };
 
         }
@@ -52,7 +48,7 @@
         function showSuccess(response) {
 
             var githubIssues = _.isArray(response.data) ? response.data : [response.data],
-                pages = github.nextPageUrl(response.headers.link),
+                pages = api.nextPageUrl(response.headers.link),
                 localConfig = issueConfig(),
                 templates = issueTemplates(helper.chalk);
 
@@ -75,7 +71,7 @@
             return {
                 stdout: issues.summary(localConfig.width, templates.issuesSummaryTechnicolor(_.pick(localConfig, 'dim'))),
                 next: pages.next && function () {
-                    return github.nextPage(pages.next.url).then(showSuccess);
+                    return api.nextPage(pages.next.url).then(showSuccess);
                 }
             };
 

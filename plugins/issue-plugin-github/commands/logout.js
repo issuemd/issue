@@ -1,12 +1,12 @@
-(function() {
+(function () {
 
     'use strict';
 
-    module.exports = function(issueConfig) {
+    module.exports = function (issueConfig) {
 
         var Q = require('q');
 
-        return function() {
+        return function () {
             try {
                 issueConfig('plugins.github.authToken', '', true);
                 issueConfig('plugins.github.authTokenId', '', true);

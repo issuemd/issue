@@ -59,9 +59,8 @@
 
             } else if (!!plugins[command]) {
                 cliParams.shift();
-                var subCommand = cliParams.shift();
-                issueConfig('command', subCommand);
-                return plugins[command](config, subCommand);
+                config.command = cliParams.shift();
+                return plugins[command](config, config.command);
             } else if (plugins[command] === false) {
                 return 'The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n';
             } else {

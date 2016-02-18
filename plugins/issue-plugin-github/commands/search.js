@@ -6,13 +6,12 @@
 
     module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
 
-        var github = require('../github.js')(issueConfig, helper, issuemd);
+        var api = require('../api.js')(issueConfig(), helper);
 
         return search;
 
         function search(config, filters) {
-            var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
-            return github.searchIssues(config.params[0], repo, filters).then(searchSuccess);
+            return api.searchIssues(config.params[0], config.githubrepo, filters).then(searchSuccess);
         }
 
         function searchSuccess(response) {
@@ -21,7 +20,7 @@
                 issues = issuemd(),
                 githubIssues = _.isArray(data) ? data : [data],
                 g = helper.chalk.green,
-                pages = github.nextPageUrl(response.headers.link),
+                pages = api.nextPageUrl(response.headers.link),
                 templates = issueTemplates(helper.chalk),
                 localConfig = issueConfig(),
                 stdout;
@@ -51,7 +50,7 @@
             return {
                 stdout: stdout,
                 next: pages.next && function () {
-                    return github.nextPage(pages.next.url).then(searchSuccess);
+                    return api.nextPage(pages.next.url).then(searchSuccess);
                 }
             };
 

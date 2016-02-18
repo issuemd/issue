@@ -8,7 +8,7 @@
     module.exports = function (issueConfig, helper, issuemd) {
 
         var api = require('../api.js')(issueConfig(), helper),
-            github = require('../github.js')(issueConfig, helper, issuemd);
+            fetchIssue = require('../json-to-issuemd')(issueConfig, helper, issuemd);
 
         return handleExport;
 
@@ -16,14 +16,12 @@
 
             var deferred = Q.defer();
 
-            var repo = github.autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote);
-
             var filters = _.pick(config, 'filter', 'state', 'labels', 'sort', 'direction', 'since');
 
             var issueList = [];
 
-            api.getIssues(repo.namespace, repo.id, filters)
-                .then(github.pages)
+            api.getIssues(config.githubrepo.namespace, config.githubrepo.id, filters)
+                .then(api.pages)
                 .then(function (response) {
 
                     issueList = issueList.concat(_.map(response, function (item) {
@@ -39,7 +37,7 @@
                             localdate,
                             remotedate = new Date(issueInfo.updated_at), // jshint ignore:line
                             mypath = path.resolve(config.dest),
-                            filename = path.join(mypath, repo.id + '-' + issueInfo.number + '.issue.md');
+                            filename = path.join(mypath, config.githubrepo.id + '-' + issueInfo.number + '.issue.md');
                         try {
                             localissue = issuemd(fs.readFileSync(filename, 'utf8'));
                             localdate = new Date(localissue.eq(0).updates().reduce(function (memo, event) {
@@ -58,9 +56,10 @@
 
                     // TODO: make this more in line with promises way of doing things
                     return limitEach(stale, config.throttle, function (issueId, cb) {
-                        github.fetchIssue(repo.namespace, repo.id, issueId, filters)
-                            .then(function (response) {
-                                writeIssueToDisk(response.issues);
+                        api.getIssue(config.githubrepo.namespace, config.githubrepo.id, issueId)
+                            .then(fetchIssue)
+                            .then(function (issue) {
+                                writeIssueToDisk(issue);
                                 cb();
                             });
                     });

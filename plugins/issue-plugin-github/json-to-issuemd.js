@@ -4,7 +4,74 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issuemd, helper, githubIssue) {
+    module.exports = function (issueConfig, helper, issuemd) {
+
+        return function (response) {
+
+            var localConfig = issueConfig();
+            var api = require('./api.js')(localConfig, helper);
+            var Q = require('q');
+            // var issueFromApiJson = require('./json-to-issuemd');
+
+            var requests = [
+                api.nextPage(response.data.events_url).then(api.pages), // jshint ignore:line
+                api.nextPage(response.data.comments_url).then(api.pages), // jshint ignore:line
+            ].concat(response.data.pull_request ? api.nextPage(response.data.pull_request.url) : []); // jshint ignore:line
+
+            return Q.all(requests).spread(function (events, comments, pullRequests) {
+
+                // TODO: compose issue at end of function
+                var issue = response.data;
+
+                issue.comments = comments;
+                issue.events = events;
+
+                if (pullRequests && pullRequests.data.updated_at) { // jshint ignore:line
+
+                    issue.events.push({
+                        event: 'pull_request',
+                        actor: {
+                            login: pullRequests.data.user.login
+                        },
+                        created_at: pullRequests.data.updated_at // jshint ignore:line
+                    });
+
+                } else {
+
+                    var lastCommentOrEventUpdate = issue.events.reduce(function (memo, item) {
+                        return item.event !== 'referenced' && new Date(item.created_at) > new Date(memo) ? item.created_at : memo; // jshint ignore:line
+                    }, issue.comments.length && issue.comments[issue.comments.length - 1].updated_at); // jshint ignore:line
+
+                    var calculatedUpdateTime;
+
+                    if (!lastCommentOrEventUpdate && issue.created_at !== issue.updated_at) { // jshint ignore:line
+                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                    } else if (!!lastCommentOrEventUpdate && new Date(issue.updated_at) > new Date(lastCommentOrEventUpdate)) { // jshint ignore:line
+                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                    }
+
+                    if (!!calculatedUpdateTime) { // jshint ignore:line
+                        var newevent = {
+                            event: 'update',
+                            actor: {
+                                login: issue.user.login
+                            },
+                            created_at: calculatedUpdateTime // jshint ignore:line
+                        };
+                        issue.events.push(newevent);
+                    }
+
+                }
+
+                return issueFromApiJson(issuemd, helper, issue);
+
+            });
+
+        };
+    };
+
+
+    function issueFromApiJson(issuemd, helper, githubIssue) {
 
         // create issuemd instance
         var issue = issuemd({
@@ -163,6 +230,6 @@
 
         return issue;
 
-    };
+    }
 
 }());

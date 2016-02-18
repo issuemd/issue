@@ -25,6 +25,8 @@ module.exports = function () {
 
         return {
             nextPage: nextPage,
+            nextPageUrl: nextPageUrl,
+            pages: pages,
             createAuthToken: createAuthToken,
             getAuthTokens: getAuthTokens,
             rateLimit: rateLimit,
@@ -38,6 +40,38 @@ module.exports = function () {
             searchRepositories: searchRepositories,
             searchIssues: searchIssues
         };
+
+        function pages(response) {
+
+            var data = [];
+
+            return success(response);
+
+            function success(response) {
+                data = data.concat(response.data);
+                var pages = nextPageUrl(response.headers.link);
+                return pages.next && nextPage(pages.next.url).then(success) || data;
+            }
+
+        }
+
+        function nextPageUrl(link) {
+
+            var urls = {};
+
+            if (link) {
+                // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
+                link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, function (_, url, page, name) {
+                    urls[name] = {
+                        url: url,
+                        page: page * 1
+                    };
+                });
+            }
+
+            return urls;
+
+        }
 
         function nextPage(url) {
             return ajaxWrapper(url);
