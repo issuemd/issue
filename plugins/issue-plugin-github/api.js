@@ -202,7 +202,7 @@ module.exports = function () {
             helper.ajax(url, options, body).then(function (response) {
                     if (response.headers['x-ratelimit-remaining'] * 1 < 50) {
                         deferred.notify({
-                            stdout: 'Github api calls remaining: ' + response.headers['x-ratelimit-remaining']
+                            stderr: 'Github api calls remaining: ' + response.headers['x-ratelimit-remaining']
                         });
                     }
                     deferred.resolve(response);

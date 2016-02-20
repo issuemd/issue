@@ -20,6 +20,7 @@
             var issueList = [];
 
             api.getIssues(config.githubrepo.namespace, config.githubrepo.id, filters)
+                .progress(deferred.notify)
                 .then(api.pages)
                 .then(function (response) {
 
