@@ -2,18 +2,14 @@ module.exports = (function () {
 
     'use strict';
 
-    var path = require('path'),
-        fs = require('fs');
-
     var _ = require('underscore');
 
-    // TODO: figure out best way to require dependencies
-    var src = path.join(path.dirname(fs.realpathSync(__filename)), '../..'),
-        config = require(src + '/issue-config.js').init(process.argv)(),
-        helper = require(src + '/issue-helper.js')(config.tech),
+    var issue = require('../../issue-cli.js').init(process.argv),
+        helper = issue.helper,
+        config = issue.helper.config,
         defaultAnswer = 'n';
 
-    return resultHandler(require(src + '/issue-cli.js').run(process.argv));
+    return resultHandler(issue.run(process.argv));
 
     function resultHandler(result) {
 

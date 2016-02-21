@@ -5,9 +5,7 @@
     var path = require('path'),
         fs = require('fs');
 
-    module.exports = function (issueConfig) {
-
-        var helper = require('./issue-helper.js')(issueConfig());
+    module.exports = function (issueConfig, helper) {
 
         return function () {
 

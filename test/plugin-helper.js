@@ -2,13 +2,27 @@
 
 module.exports = (function () {
 
+        var fixtures = require('./fixtures.js');
+
+    // temporarily load mocked argv over process.argv for loading config
+    var cacheProcessAgrv = process.argv,
+        cacheEnvTesting = process.env.TESTING;
+    if (process.platform === 'win32') {
+        process.env.USERPROFILE = JSON.parse(fixtures.configFileArray).slice(-1)[0];
+    }
+    process.argv = JSON.parse(fixtures.argv);
+    process.env.TESTING = true;
+
+    var issue = require('../src/issue-cli.js').init(process.argv)
+    process.argv = cacheProcessAgrv;
+    process.env.TESTING = cacheEnvTesting;
+
     var pluginHelper = {
         issueHelper: issueHelperFactory(mockConfig),
         issueHelperFactory: issueHelperFactory,
-        mockConfig: mockConfig
+        mockConfig: mockConfig,
+        issuemd: require('issuemd')
     };
-
-    pluginHelper.issuemd = getIssuemd(pluginHelper.issueHelper, mockConfig());
 
     return pluginHelper;
 
@@ -16,52 +30,10 @@ module.exports = (function () {
         return {};
     }
 
-    function issueHelperFactory(config) {
-        var issueHelperProxy = require('../src/issue-helper.js')(config);
+    function issueHelperFactory() {
+        var issueHelperProxy = issue.helper;
         issueHelperProxy.ajax = require('./mock.js')(issueHelperProxy.ajax, process.env.npm_config_record ? 'record' : 'lockdown'); // jshint ignore:line
         return issueHelperProxy;
-    }
-
-    function getIssuemd(issueHelper, config) {
-
-        var chalk = issueHelper.chalk,
-            issuemd = require('issuemd');
-
-        var colorisationFunctions = {
-            bkey: function (val, render) {
-                return render(chalk.red(val));
-            },
-            bsep: function (val, render) {
-                return render(chalk.bold.gray(val));
-            },
-            htext: function (val, render) {
-                return render(config && config.dim ? chalk.bold.bgWhite.red(val) : chalk.bold.bgRed(val));
-            },
-            hsep: function (val, render) {
-                return render(config && config.dim ? chalk.bold.bgWhite.white(val) : chalk.bold.bgRed.red(val));
-            },
-            btext: function (val, render) {
-                return render(chalk.reset(val));
-            }
-        };
-
-        // TODO: tidier way to define custom colours, perhaps introduce config method in issuemd, or plugin?
-        var summaryCache = issuemd.fn.summary;
-        issuemd.fn.summary = function () {
-            var args = [].slice.call(arguments, 0);
-            args[2] = args[2] || colorisationFunctions;
-            return summaryCache.apply(this, args);
-        };
-
-        var stringCache = issuemd.fn.toString;
-        issuemd.fn.toString = function () {
-            var args = [].slice.call(arguments, 0);
-            args[2] = args[2] || colorisationFunctions;
-            return stringCache.apply(this, args);
-        };
-
-        return issuemd;
-
     }
 
 })();

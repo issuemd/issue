@@ -57,9 +57,8 @@ describe('issue github', function () {
             }
         }, 'show').then(function (result) {
 
-            // should contain summary table
             expect(result.stdout.length).toBe(4288);
-
+            
             done();
 
         });

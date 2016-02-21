@@ -54,7 +54,7 @@
         };
 
         var plugins = {
-            init: require('./issue-init.js')(issueConfig)
+            init: require('./issue-init.js')(issueConfig, helper)
         };
 
         _.each(pluginDirs, function (pluginDir) {

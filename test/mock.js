@@ -11,6 +11,7 @@ module.exports = function (ajax, mode, fixturePath) {
     nock.back.fixtures = path.join(path.dirname(fs.realpathSync(__filename)) + '/..', fixturePath || 'test/mocks/');
 
     // pass in `record` for mode to store api calls
+    // mode = 'record';
     nock.back.setMode(typeof mode === 'string' ? mode : 'lockdown');
 
     var cacheJax = ajax;
