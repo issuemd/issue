@@ -2,7 +2,7 @@
 
 module.exports = (function () {
 
-        var fixtures = require('./fixtures.js');
+    var fixtures = require('./fixtures.js');
 
     // temporarily load mocked argv over process.argv for loading config
     var cacheProcessAgrv = process.argv,
@@ -13,7 +13,8 @@ module.exports = (function () {
     process.argv = JSON.parse(fixtures.argv);
     process.env.TESTING = true;
 
-    var issue = require('../src/issue-cli.js').init(process.argv)
+    var issue = require('../src/issue-cli.js').init(process.argv);
+    delete issue.helper.config.width;
     process.argv = cacheProcessAgrv;
     process.env.TESTING = cacheEnvTesting;
 

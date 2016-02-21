@@ -9,7 +9,7 @@ describe('issue github', function () {
         // hijack the issueHelper to inject mocks on ajax function
         pluginHelper = require(rootpath + 'test/plugin-helper'),
         issuemd = pluginHelper.issuemd,
-        github = require('../main.js')(pluginHelper.mockConfig, pluginHelper.issueHelper, issuemd);
+        github = require('../issue-plugin-github.js')(pluginHelper.issueHelper, issuemd);
 
     it('should load as function', function () {
 
@@ -58,7 +58,7 @@ describe('issue github', function () {
         }, 'show').then(function (result) {
 
             expect(result.stdout.length).toBe(4288);
-            
+
             done();
 
         });

@@ -2,9 +2,7 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper) { // issuemd
-
-        var config = issueConfig();
+    module.exports = function (helper) { // issuemd
 
         return function () {
 
@@ -12,7 +10,7 @@
                 spawnSync = require('child_process').spawnSync,
                 path = require('path'),
                 bin = path.join(__dirname, '..', '..', 'bin', 'issue'),
-                command = config.set || '',
+                command = helper.config.set || '',
                 prompt = function (command) {
                     return [
                         helper.chalk.bold.red('#') + helper.chalk.bold.white('issue'),

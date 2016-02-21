@@ -2,7 +2,7 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper) {
+    module.exports = function (helper) {
 
         var path = require('path'),
             fs = require('fs');
@@ -12,7 +12,7 @@
 
         var chalk = helper.chalk;
 
-        var config = issueConfig(),
+        var config = helper.config,
             pluginDirs = [
                 path.join(__dirname, '..', 'plugins'),
                 path.join(__dirname, '..', '..')
@@ -54,7 +54,7 @@
         };
 
         var plugins = {
-            init: require('./issue-init.js')(issueConfig, helper)
+            init: require('./issue-init.js')(helper)
         };
 
         _.each(pluginDirs, function (pluginDir) {
@@ -82,7 +82,7 @@
 
                             if (!!config.plugins[value].enabled) {
                                 packageJson = require(pluginDir + projectName + path.sep + 'package.json');
-                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(issueConfig, helper, issuemd);
+                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(helper, issuemd);
                             } else {
                                 plugins[value] = false;
                             }

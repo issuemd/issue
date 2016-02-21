@@ -1,6 +1,6 @@
 'use strict';
 
-! function() {
+! function () {
 
     var helper;
 
@@ -23,7 +23,7 @@
         helper.src = src;
         helper.config = config;
         helper.configGenerator = configGenerator;
-        var plugins = require('./issue-plugins.js')(configGenerator, helper);
+        var plugins = require('./issue-plugins.js')(helper);
         helper.plugins = plugins;
 
         return {
@@ -148,11 +148,11 @@
                 // if first sub-command is `remove` then remove from config, key specified in second sub-command
                 // else set key/value as first/second sub-command
                 if (cliParams[1] === 'remove') {
-                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function() {
+                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function () {
                         configGenerator(cliParams[2], null, userConfigFlag);
                     }, helper.chalk.red('aborted config change'), 'y');
                 } else {
-                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function() {
+                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function () {
                         configGenerator(cliParams[1], cliParams[2], userConfigFlag);
                     }, helper.chalk.red('aborted config change'), 'y');
                 }

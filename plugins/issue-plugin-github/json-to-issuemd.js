@@ -4,7 +4,7 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issueConfig, helper, api, issuemd) {
+    module.exports = function (helper, api, issuemd) {
 
         return function (response) {
 

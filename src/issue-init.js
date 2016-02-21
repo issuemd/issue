@@ -3,9 +3,10 @@
 ! function () {
 
     var path = require('path'),
-        fs = require('fs');
+        fs = require('fs'),
+        utils = require('./issue-utils');
 
-    module.exports = function (issueConfig, helper) {
+    module.exports = function () {
 
         return function () {
 
@@ -15,7 +16,7 @@
             }
 
             var newConfig = {};
-            helper.promptYesNo('Do you like colours in your console? [Yn]', function () {
+            utils.promptYesNo('Do you like colours in your console? [Yn]', function () {
                 newConfig.technicolor = true;
                 cb();
             }, function () {
@@ -29,7 +30,7 @@
                 console.log('');
                 console.log(JSON.stringify(newConfig, null, 4).replace(/^/gm, '    '));
                 console.log('');
-                helper.promptYesNo('Should I go ahead and write the config now? [Yn]', function () {
+                utils.promptYesNo('Should I go ahead and write the config now? [Yn]', function () {
                     fs.writeFileSync(path.join(process.cwd(), '.issuerc'), JSON.stringify(newConfig, null, 4));
                 }, 'Config creation aborted - phew, that was close!', 'y');
 

@@ -2,7 +2,7 @@
 
     'use strict';
 
-    module.exports = function (issueConfig, helper, api) {
+    module.exports = function (helper, api) {
 
         var _ = require('underscore');
 

@@ -4,7 +4,7 @@
 
     var _ = require('underscore');
 
-    module.exports = function (issueConfig, helper, api, issuemd) {
+    module.exports = function (helper, api, issuemd) {
 
         return function (config, filters) {
             return api.searchIssues(config.params[0], config.githubrepo, filters).then(searchSuccess);
@@ -17,7 +17,6 @@
                 githubIssues = _.isArray(data) ? data : [data],
                 g = helper.chalk.green,
                 pages = api.nextPageUrl(response.headers.link),
-                localConfig = issueConfig(),
                 stdout;
 
             _.each(githubIssues, function (githubIssue) {
@@ -39,7 +38,7 @@
 
             });
 
-            stdout = issues.summary(localConfig.width);
+            stdout = issues.summary(helper.config.width);
             stdout += 'Total results: ' + g(response.data.total_count); // jshint ignore:line
 
             return {

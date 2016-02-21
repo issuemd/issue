@@ -5,9 +5,9 @@
     var _ = require('underscore'),
         Q = require('q');
 
-    module.exports = function (issueConfig, helper, api, issuemd) {
+    module.exports = function (helper, api, issuemd) {
 
-        var fetchIssue = require('../json-to-issuemd')(issueConfig, helper, api, issuemd);
+        var fetchIssue = require('../json-to-issuemd')(helper, api, issuemd);
 
         return show;
 
@@ -34,10 +34,8 @@
 
         function showIssueSuccess(issues) {
 
-            var localConfig = issueConfig();
-
             return {
-                stdout: issues.toString(localConfig.width)
+                stdout: issues.toString(helper.config.width)
             };
 
         }
@@ -45,8 +43,7 @@
         function showSuccess(response) {
 
             var githubIssues = _.isArray(response.data) ? response.data : [response.data],
-                pages = api.nextPageUrl(response.headers.link),
-                localConfig = issueConfig();
+                pages = api.nextPageUrl(response.headers.link);
 
             var issues = _.reduce(githubIssues, function (issues, githubIssue) {
 
@@ -65,7 +62,7 @@
             }, issuemd());
 
             return {
-                stdout: issues.summary(localConfig.width),
+                stdout: issues.summary(helper.config.width),
                 next: pages.next && function () {
                     return api.nextPage(pages.next.url).then(showSuccess);
                 }

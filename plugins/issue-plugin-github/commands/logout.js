@@ -2,14 +2,14 @@
 
     'use strict';
 
-    module.exports = function (issueConfig) {
+    module.exports = function (helper) {
 
         var Q = require('q');
 
         return function () {
             try {
-                issueConfig('plugins.github.authToken', '', true);
-                issueConfig('plugins.github.authTokenId', '', true);
+                helper.configGenerator('plugins.github.authToken', '', true);
+                helper.configGenerator('plugins.github.authTokenId', '', true);
                 return Q.resolve();
             } catch (e) {
                 return Q.reject(e);

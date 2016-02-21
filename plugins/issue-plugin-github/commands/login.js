@@ -2,12 +2,12 @@
 
     'use strict';
 
-    module.exports = function (issueConfig, helper, api) {
+    module.exports = function (helper, api) {
 
         var hostname = require('os').hostname(),
             _ = require('underscore'),
             Q = require('q'),
-            logout = require('./logout.js')(issueConfig);
+            logout = require('./logout.js')(helper);
 
         return function (config) {
 
@@ -35,8 +35,8 @@
 
         function writeGithubToken(token, tokenId) {
             try {
-                issueConfig('plugins.github.authToken', token, true);
-                issueConfig('plugins.github.authTokenId', tokenId, true);
+                helper.configGenerator('plugins.github.authToken', token, true);
+                helper.configGenerator('plugins.github.authTokenId', tokenId, true);
                 return Q.resolve();
             } catch (e) {
                 return Q.reject(e);

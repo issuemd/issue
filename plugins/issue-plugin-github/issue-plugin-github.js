@@ -2,27 +2,26 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper, issuemd) {
+    module.exports = function (helper, issuemd) {
 
         var _ = require('underscore');
 
-        var localConfig = issueConfig(),
-            stderr = [];
+        var stderr = [];
 
-        // TODO: why do we have localConfig and also pass config?
+        // TODO: why do we have config and also pass config?
         var githubCli = function (config, command) {
 
             var api = require('./api.js')(config, helper);
 
             // unless disabled, assueme autodetect is true
             var githubrepo = autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote),
-                filters = _.pick(localConfig, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']);
+                filters = _.pick(config, ['in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars', 'sort', 'order']);
 
             if (githubrepo) {
                 config.githubrepo = githubrepo;
             }
 
-            if (localConfig.plugins && localConfig.plugins.github && !localConfig.plugins.github.authToken) {
+            if (config.plugins && config.plugins.github && !config.plugins.github.authToken) {
                 stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
             }
 
@@ -33,7 +32,7 @@
 
             try {
                 // try to require the module, passing initialisation methods, then run with config and filters
-                return require('./commands/' + command)(issueConfig, helper, api, issuemd)(config, filters);
+                return require('./commands/' + command)(helper, api, issuemd)(config, filters);
             } catch (e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
                     return config.help ? githubCli.helptext : [
