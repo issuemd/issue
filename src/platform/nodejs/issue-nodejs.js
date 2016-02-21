@@ -1,4 +1,4 @@
-module.exports = (function(){
+module.exports = (function () {
 
     'use strict';
 
@@ -8,7 +8,7 @@ module.exports = (function(){
     var _ = require('underscore');
 
     // TODO: figure out best way to require dependencies
-    var src = path.join(path.dirname(fs.realpathSync(__filename)), '../src'),
+    var src = path.join(path.dirname(fs.realpathSync(__filename)), '../..'),
         config = require(src + '/issue-config.js').init(process.argv)(),
         helper = require(src + '/issue-helper.js')(config.tech),
         defaultAnswer = 'n';
@@ -55,6 +55,5 @@ module.exports = (function(){
         result && result.stderr && process.stderr.write(result.stderr + '\n');
         return result;
     }
-
 
 })();
