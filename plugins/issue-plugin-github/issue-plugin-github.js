@@ -11,7 +11,7 @@
         // TODO: why do we have config and also pass config?
         var githubCli = function (config, command) {
 
-            var api = require('./api.js')(config, helper);
+            var api = require('./api.js')(helper);
 
             // unless disabled, assueme autodetect is true
             var githubrepo = autoDetectRepo(config.repo, config.plugins.github.autodetect !== false, config.git && config.git.remote),
@@ -42,7 +42,6 @@
                         '',
                         'Usage:',
                         '',
-                        '  issue github list mine',
                         '  issue github list --repo <namespace/project>',
                         '  issue github show --repo <namespace/project> <id>',
                         '',

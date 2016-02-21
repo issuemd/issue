@@ -2,7 +2,7 @@
 
 module.exports = function () {
 
-    return function (config, helper) {
+    return function (helper) {
 
         var _ = require('underscore'),
             Q = require('q');
@@ -185,12 +185,12 @@ module.exports = function () {
                 deferred = new Q.defer();
 
             // if Basic Auth is not present, check for existing access token
-            if (!/[?&]access_token=/.test(url) && (!options.headers || !options.headers.Authorization) && config.plugins && config.plugins.github && config.plugins.github.authToken) {
-                url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + config.plugins.github.authToken;
+            if (!/[?&]access_token=/.test(url) && (!options.headers || !options.headers.Authorization) && helper.config.plugins && helper.config.plugins.github && helper.config.plugins.github.authToken) {
+                url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + helper.config.plugins.github.authToken;
             }
 
-            if (config['api-per-page'] && !/[?&]per_page=/.test(url)) {
-                url += (/\?/.test(url) ? '&' : '?') + 'per_page=' + config['api-per-page'];
+            if (helper.config['api-per-page'] && !/[?&]per_page=/.test(url)) {
+                url += (/\?/.test(url) ? '&' : '?') + 'per_page=' + helper.config['api-per-page'];
             }
 
             if (options.method === 'GET' && body) {
