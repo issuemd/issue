@@ -2,7 +2,7 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper, issuemd, issueTemplates) {
+    module.exports = function (issueConfig, helper, issuemd) {
 
         var _ = require('underscore');
 
@@ -33,7 +33,7 @@
 
             try {
                 // try to require the module, passing initialisation methods, then run with config and filters
-                return require('./commands/' + command)(issueConfig, helper, api, issuemd, issueTemplates)(config, filters);
+                return require('./commands/' + command)(issueConfig, helper, api, issuemd)(config, filters);
             } catch (e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
                     return config.help ? githubCli.helptext : [

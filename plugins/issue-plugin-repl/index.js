@@ -2,7 +2,7 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper) { // issuemd, issueTemplates
+    module.exports = function (issueConfig, helper) { // issuemd
 
         var config = issueConfig();
 

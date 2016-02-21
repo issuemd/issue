@@ -8,9 +8,8 @@ describe('issue github', function () {
     var rootpath = '../../../',
         // hijack the issueHelper to inject mocks on ajax function
         pluginHelper = require(rootpath + 'test/plugin-helper'),
-        issuemd = require('issuemd'),
-        issueTemplates = require(rootpath + 'src/issue-templates.js'),
-        github = require('../main.js')(pluginHelper.mockConfig, pluginHelper.issueHelper, issuemd, issueTemplates);
+        issuemd = pluginHelper.issuemd,
+        github = require('../main.js')(pluginHelper.mockConfig, pluginHelper.issueHelper, issuemd);
 
     it('should load as function', function () {
 
@@ -59,7 +58,7 @@ describe('issue github', function () {
         }, 'show').then(function (result) {
 
             // should contain summary table
-            expect(result.stdout.length).toBe(4047);
+            expect(result.stdout.length).toBe(4288);
 
             done();
 
@@ -81,10 +80,10 @@ describe('issue github', function () {
             }
         }, 'show').then(function (result) {
 
-            expect(result.stdout.length).toBe(4047);
+            expect(result.stdout.length).toBe(4288);
 
             result.next().then(function (result) {
-                expect(result.stdout.length).toBe(1310);
+                expect(result.stdout.length).toBe(1367);
                 done();
             });
 
