@@ -5,9 +5,9 @@
     var _ = require('underscore'),
         Q = require('q');
 
-    module.exports = function (helper, api, issuemd) {
+    module.exports = function (helper, api) {
 
-        var fetchIssue = require('../json-to-issuemd')(helper, api, issuemd);
+        var fetchIssue = require('../json-to-issuemd')(helper, api);
 
         return handleExport;
 
@@ -39,7 +39,7 @@
                             mypath = path.resolve(config.dest),
                             filename = path.join(mypath, config.githubrepo.id + '-' + issueInfo.number + '.issue.md');
                         try {
-                            localissue = issuemd(fs.readFileSync(filename, 'utf8'));
+                            localissue = helper.issuemd(fs.readFileSync(filename, 'utf8'));
                             localdate = new Date(localissue.eq(0).updates().reduce(function (memo, event) {
                                 return event.type !== 'reference' ? event.modified : memo; // jshint ignore:line
                             }, localissue.attr('created')));

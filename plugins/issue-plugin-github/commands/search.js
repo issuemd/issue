@@ -4,7 +4,7 @@
 
     var _ = require('underscore');
 
-    module.exports = function (helper, api, issuemd) {
+    module.exports = function (helper, api) {
 
         return function (config, filters) {
             return api.searchIssues(config.params[0], config.githubrepo, filters).then(searchSuccess);
@@ -13,7 +13,7 @@
         function searchSuccess(response) {
 
             var data = response.data.items,
-                issues = issuemd(),
+                issues = helper.issuemd(),
                 githubIssues = _.isArray(data) ? data : [data],
                 g = helper.chalk.green,
                 pages = api.nextPageUrl(response.headers.link),
@@ -21,7 +21,7 @@
 
             _.each(githubIssues, function (githubIssue) {
 
-                var issue = issuemd({})
+                var issue = helper.issuemd({})
                     .attr({
                         title: githubIssue.title,
                         creator: helper.personFromParts({

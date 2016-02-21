@@ -4,7 +4,7 @@
 
     var _ = require('underscore');
 
-    module.exports = function (helper, api, issuemd) {
+    module.exports = function (helper, api) {
 
         return function (response) {
 
@@ -61,7 +61,7 @@
 
                 }
 
-                return issueFromApiJson(issuemd, helper, issue);
+                return issueFromApiJson(helper, issue);
 
             });
 
@@ -69,10 +69,10 @@
     };
 
 
-    function issueFromApiJson(issuemd, helper, githubIssue) {
+    function issueFromApiJson(helper, githubIssue) {
 
         // create issuemd instance
-        var issue = issuemd({
+        var issue = helper.issuemd({
             title: githubIssue.title,
             creator: helper.personFromParts({
                 username: githubIssue.user.login

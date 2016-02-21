@@ -23,6 +23,44 @@
         helper.src = src;
         helper.config = config;
         helper.configGenerator = configGenerator;
+
+        var issuemd = require('issuemd');
+
+        var colorisationFunctions = {
+            bkey: function (val, render) {
+                return render(helper.chalk.red(val));
+            },
+            bsep: function (val, render) {
+                return render(helper.chalk.bold.gray(val));
+            },
+            htext: function (val, render) {
+                return render(config && config.dim ? helper.chalk.bold.bgWhite.red(val) : helper.chalk.bold.bgRed(val));
+            },
+            hsep: function (val, render) {
+                return render(config && config.dim ? helper.chalk.bold.bgWhite.white(val) : helper.chalk.bold.bgRed.red(val));
+            },
+            btext: function (val, render) {
+                return render(helper.chalk.reset(val));
+            }
+        };
+
+        // TODO: tidier way to define custom colours, perhaps introduce config method in issuemd, or plugin?
+        var summaryCache = issuemd.fn.summary;
+        issuemd.fn.summary = function () {
+            var args = [].slice.call(arguments, 0);
+            args[2] = args[2] || colorisationFunctions;
+            return summaryCache.apply(this, args);
+        };
+
+        var stringCache = issuemd.fn.toString;
+        issuemd.fn.toString = function () {
+            var args = [].slice.call(arguments, 0);
+            args[2] = args[2] || colorisationFunctions;
+            return stringCache.apply(this, args);
+        };
+
+        helper.issuemd = issuemd;
+
         var plugins = require('./issue-plugins.js')(helper);
         helper.plugins = plugins;
 

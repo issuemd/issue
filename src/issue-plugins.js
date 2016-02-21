@@ -7,10 +7,7 @@
         var path = require('path'),
             fs = require('fs');
 
-        var _ = require('underscore'),
-            issuemd = require('issuemd');
-
-        var chalk = helper.chalk;
+        var _ = require('underscore');
 
         var config = helper.config,
             pluginDirs = [
@@ -19,39 +16,6 @@
             ].concat(config['plugin-dir'] ? [config['plugin-dir']] : []).map(function (pluginDir) {
                 return path.resolve(pluginDir) + path.sep;
             });
-
-        var colorisationFunctions = {
-            bkey: function (val, render) {
-                return render(chalk.red(val));
-            },
-            bsep: function (val, render) {
-                return render(chalk.bold.gray(val));
-            },
-            htext: function (val, render) {
-                return render(config && config.dim ? chalk.bold.bgWhite.red(val) : chalk.bold.bgRed(val));
-            },
-            hsep: function (val, render) {
-                return render(config && config.dim ? chalk.bold.bgWhite.white(val) : chalk.bold.bgRed.red(val));
-            },
-            btext: function (val, render) {
-                return render(chalk.reset(val));
-            }
-        };
-
-        // TODO: tidier way to define custom colours, perhaps introduce config method in issuemd, or plugin?
-        var summaryCache = issuemd.fn.summary;
-        issuemd.fn.summary = function () {
-            var args = [].slice.call(arguments, 0);
-            args[2] = args[2] || colorisationFunctions;
-            return summaryCache.apply(this, args);
-        };
-
-        var stringCache = issuemd.fn.toString;
-        issuemd.fn.toString = function () {
-            var args = [].slice.call(arguments, 0);
-            args[2] = args[2] || colorisationFunctions;
-            return stringCache.apply(this, args);
-        };
 
         var plugins = {
             init: require('./issue-init.js')(helper)
@@ -82,7 +46,7 @@
 
                             if (!!config.plugins[value].enabled) {
                                 packageJson = require(pluginDir + projectName + path.sep + 'package.json');
-                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(helper, issuemd);
+                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(helper);
                             } else {
                                 plugins[value] = false;
                             }

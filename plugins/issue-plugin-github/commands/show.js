@@ -5,9 +5,9 @@
     var _ = require('underscore'),
         Q = require('q');
 
-    module.exports = function (helper, api, issuemd) {
+    module.exports = function (helper, api) {
 
-        var fetchIssue = require('../json-to-issuemd')(helper, api, issuemd);
+        var fetchIssue = require('../json-to-issuemd')(helper, api);
 
         return show;
 
@@ -47,7 +47,7 @@
 
             var issues = _.reduce(githubIssues, function (issues, githubIssue) {
 
-                return issues.merge(issuemd({
+                return issues.merge(helper.issuemd({
                     title: githubIssue.title,
                     creator: helper.personFromParts({
                         username: githubIssue.user.login
@@ -59,7 +59,7 @@
                     status: githubIssue.state || ''
                 }));
 
-            }, issuemd());
+            }, helper.issuemd());
 
             return {
                 stdout: issues.summary(helper.config.width),
