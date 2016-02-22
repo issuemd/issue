@@ -11,14 +11,10 @@
 
         return function (config) {
 
-            // TODO: replace this functionality - rely on --username and --password
-            var username = config.params[0],
-                password = config.params[1];
-
             // first logout, which ensures userconfig is writable
             return logout().then(function () {
                 // if somebody already typed in username and password
-                return helper.captureCredentials(username, password);
+                return helper.captureCredentials(config.username, config.password);
             }).then(function (credentials) {
                 return doLogin(credentials.username, credentials.password, generateTokenName(credentials.username, hostname));
             }).then(function (result) {

@@ -2,15 +2,14 @@
 
 ! function () {
 
-    var path = require('path'),
-        fs = require('fs'),
+    var writeFileSync = require('fs').writeFileSync,
         utils = require('./issue-utils');
 
     module.exports = function () {
 
         return function () {
 
-            if (fs.existsSync(path.join(process.cwd(), '.issuerc'))) {
+            if (utils.fileExists('.issuerc')) {
                 console.log('Can not init issuemd here, there is already a `.issuerc` file present in this directory - sorry :-/');
                 return;
             }
@@ -31,7 +30,7 @@
                 console.log(JSON.stringify(newConfig, null, 4).replace(/^/gm, '    '));
                 console.log('');
                 utils.promptYesNo('Should I go ahead and write the config now? [Yn]', function () {
-                    fs.writeFileSync(path.join(process.cwd(), '.issuerc'), JSON.stringify(newConfig, null, 4));
+                    writeFileSync('.issuerc', JSON.stringify(newConfig, null, 4));
                 }, 'Config creation aborted - phew, that was close!', 'y');
 
             }

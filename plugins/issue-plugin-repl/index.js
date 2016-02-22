@@ -2,7 +2,7 @@
 
 ! function () {
 
-    module.exports = function (helper) { // issuemd
+    module.exports = function (helper) {
 
         return function () {
 

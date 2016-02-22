@@ -9,7 +9,6 @@
         return function (response) {
 
             var Q = require('q');
-            // var issueFromApiJson = require('./json-to-issuemd');
 
             var requests = [
                 api.nextPage(response.data.events_url).then(api.pages), // jshint ignore:line
@@ -18,15 +17,9 @@
 
             return Q.all(requests).spread(function (events, comments, pullRequests) {
 
-                // TODO: compose issue at end of function
-                var issue = response.data;
-
-                issue.comments = comments;
-                issue.events = events;
-
                 if (pullRequests && pullRequests.data.updated_at) { // jshint ignore:line
 
-                    issue.events.push({
+                    events.push({
                         event: 'pull_request',
                         actor: {
                             login: pullRequests.data.user.login
@@ -36,30 +29,34 @@
 
                 } else {
 
-                    var lastCommentOrEventUpdate = issue.events.reduce(function (memo, item) {
+                    var lastCommentOrEventUpdate = events.reduce(function (memo, item) {
                         return item.event !== 'referenced' && new Date(item.created_at) > new Date(memo) ? item.created_at : memo; // jshint ignore:line
-                    }, issue.comments.length && issue.comments[issue.comments.length - 1].updated_at); // jshint ignore:line
+                    }, comments.length && comments[comments.length - 1].updated_at); // jshint ignore:line
 
                     var calculatedUpdateTime;
 
-                    if (!lastCommentOrEventUpdate && issue.created_at !== issue.updated_at) { // jshint ignore:line
-                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
-                    } else if (!!lastCommentOrEventUpdate && new Date(issue.updated_at) > new Date(lastCommentOrEventUpdate)) { // jshint ignore:line
-                        calculatedUpdateTime = issue.updated_at; // jshint ignore:line
+                    if (!lastCommentOrEventUpdate && response.data.created_at !== response.data.updated_at) { // jshint ignore:line
+                        calculatedUpdateTime = response.data.updated_at; // jshint ignore:line
+                    } else if (!!lastCommentOrEventUpdate && new Date(response.data.updated_at) > new Date(lastCommentOrEventUpdate)) { // jshint ignore:line
+                        calculatedUpdateTime = response.data.updated_at; // jshint ignore:line
                     }
 
                     if (!!calculatedUpdateTime) { // jshint ignore:line
                         var newevent = {
                             event: 'update',
                             actor: {
-                                login: issue.user.login
+                                login: response.data.user.login
                             },
                             created_at: calculatedUpdateTime // jshint ignore:line
                         };
-                        issue.events.push(newevent);
+                        events.push(newevent);
                     }
 
                 }
+
+                var issue = response.data;
+                issue.events = events;
+                issue.comments = comments;
 
                 return issueFromApiJson(helper, issue);
 

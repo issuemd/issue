@@ -8,7 +8,6 @@
 
         var stderr = [];
 
-        // TODO: why do we have config and also pass config?
         var githubCli = function (config, command) {
 
             var api = require('./api.js')(helper);
