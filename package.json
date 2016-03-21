@@ -31,6 +31,7 @@
     "format": "bash -c \"js-beautify -f bin/issue -f src/*.js test/*.js plugins/*/*.js plugins/*/*/*.js -r\"",
     "lint": "jshint src test plugins bin/issue",
     "test": "bash -c \"minijasminenode2 --noStack --verbose test/*.unit.js plugins/*/tests/*.unit.js\"",
+    "test:record": "npm_config_record=true npm test",
     "test:cover": "bash -c \"istanbul cover --print none --report none --dir reports/coverage -- node_modules/minijasminenode2/bin/minijn --noStack --verbose plugins/*/*/*.unit.js test/*.unit.js\" && istanbul report --root reports/coverage text",
     "update": "updtr"
   },
