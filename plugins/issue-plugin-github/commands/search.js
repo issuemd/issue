@@ -15,8 +15,8 @@
             var data = response.data.items,
                 issues = helper.issuemd(),
                 githubIssues = _.isArray(data) ? data : [data],
-                g = helper.chalk.green,
                 pages = api.nextPageUrl(response.headers.link),
+                // TODO: not sure if this stdout is making it into output
                 stdout;
 
             _.each(githubIssues, function (githubIssue) {
@@ -39,7 +39,7 @@
             });
 
             stdout = issues.summary(helper.config.width);
-            stdout += 'Total results: ' + g(response.data.total_count); // jshint ignore:line
+            stdout += helper.info('Total results', response.data.total_count); // jshint ignore:line
 
             return {
                 stdout: stdout,

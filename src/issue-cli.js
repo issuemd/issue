@@ -1,6 +1,6 @@
 'use strict';
 
-! function () {
+! function() {
 
     var helper;
 
@@ -20,40 +20,112 @@
 
         helper.chalk = getChalk(config.technicolor);
 
+        helper.notice = function(message) {
+            return helper.chalk.red('notice: ') + helper.chalk.gray(message);
+        };
+
+        helper.info = function(label, message) {
+            return label + ': ' + helper.chalk.green(message);
+        };
+
+        helper.repolistitem = function(namespace, project, rank) {
+            return namespace + helper.chalk.grey('/') + helper.chalk.red(project) + helper.chalk.grey(' \u2606 ' + rank);
+        };
+
         helper.src = src;
         helper.config = config;
         helper.configGenerator = configGenerator;
 
+        helper.events = {
+            closed: function() { /* evt.actor.login */
+                return 'status: closed';
+            },
+            reopened: function() { /* evt.actor.login */
+                return 'status: reopened';
+            },
+            merged: function() { /* evt.actor.login */
+                return 'status: merged';
+            },
+            locked: function() { /* evt.actor.login */
+                return 'locking: locked';
+            },
+            unlocked: function() { /* evt.actor.login */
+                return 'locking: unlocked';
+            },
+            subscribed: function(user) {
+                'subscribed: ' + user;
+            },
+            mentioned: function(user) {
+                'mentioned: ' + user;
+            },
+            assigned: function(user) {
+                'assigned: ' + user;
+            },
+            unassigned: function(user) {
+                'unassigned: ' + user;
+            },
+            labeled: function(user) {
+                'added label: ' + user;
+            },
+            unlabeled: function(user) {
+                'removed label: ' + user;
+            },
+            milestoned: function(user) {
+                'added milestone: ' + user;
+            },
+            demilestoned: function(user) {
+                'removed milestone: ' + user;
+            },
+            renamed: function(user) {
+                'renamed issue: ' + user;
+            },
+            branchDeleted: function() {
+                return 'branch: deleted';
+            },
+            branchRestored: function() {
+                return 'branch: restored';
+            },
+            referenced: function() {
+                return 'The issue was referenced from a commit message';
+            },
+            pullRequest: function() {
+                return 'pull request opened';
+            },
+            update: function() {
+                return 'update to issue';
+            }
+        }
+
         var issuemd = require('issuemd');
 
         var colorisationFunctions = {
-            bkey: function (val, render) {
+            bkey: function(val, render) {
                 return render(helper.chalk.red(val));
             },
-            bsep: function (val, render) {
+            bsep: function(val, render) {
                 return render(helper.chalk.bold.gray(val));
             },
-            htext: function (val, render) {
+            htext: function(val, render) {
                 return render(config && config.dim ? helper.chalk.bold.bgWhite.red(val) : helper.chalk.bold.bgRed(val));
             },
-            hsep: function (val, render) {
+            hsep: function(val, render) {
                 return render(config && config.dim ? helper.chalk.bold.bgWhite.white(val) : helper.chalk.bold.bgRed.red(val));
             },
-            btext: function (val, render) {
+            btext: function(val, render) {
                 return render(helper.chalk.reset(val));
             }
         };
 
         // TODO: tidier way to define custom colours, perhaps introduce config method in issuemd, or plugin?
         var summaryCache = issuemd.fn.summary;
-        issuemd.fn.summary = function () {
+        issuemd.fn.summary = function() {
             var args = [].slice.call(arguments, 0);
             args[2] = args[2] || colorisationFunctions;
             return summaryCache.apply(this, args);
         };
 
         var stringCache = issuemd.fn.toString;
-        issuemd.fn.toString = function () {
+        issuemd.fn.toString = function() {
             var args = [].slice.call(arguments, 0);
             args[2] = args[2] || colorisationFunctions;
             return stringCache.apply(this, args);
@@ -186,11 +258,11 @@
                 // if first sub-command is `remove` then remove from config, key specified in second sub-command
                 // else set key/value as first/second sub-command
                 if (cliParams[1] === 'remove') {
-                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function () {
+                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function() {
                         configGenerator(cliParams[2], null, userConfigFlag);
                     }, helper.chalk.red('aborted config change'), 'y');
                 } else {
-                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function () {
+                    helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function() {
                         configGenerator(cliParams[1], cliParams[2], userConfigFlag);
                     }, helper.chalk.red('aborted config change'), 'y');
                 }

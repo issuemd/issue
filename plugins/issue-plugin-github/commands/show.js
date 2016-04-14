@@ -26,7 +26,7 @@
                     .then(showIssueSuccess);
             } else {
                 return Q.reject({
-                    message: helper.chalk.gray('You must specifiy user/organization and repository name...')
+                    message: helper.notice('You must specifiy user/organization and repository name...')
                 });
             }
 

@@ -6,6 +6,7 @@
 
         var _ = require('underscore');
 
+        // TODO: this output array appears to have become disconnected
         var stderr = [];
 
         var githubCli = function (config, command) {
@@ -21,7 +22,7 @@
             }
 
             if (config.plugins && config.plugins.github && !config.plugins.github.authToken) {
-                stderr.push(helper.chalk.red('notice: ') + helper.chalk.gray('user not logged in, private data is not listed and github api limit is reduced'));
+                stderr.push(helper.notice('user not logged in, private data is not listed and github api limit is reduced'));
             }
 
             // alias the `list` command to `show`
@@ -66,7 +67,7 @@
             '  issue github show --repo <user/name> <id>              - display specified issue',
             '',
             '  issue github export --repo <user/name> --dest <export-path> --answer <yes-no>',
-            '                                                         - display specified issue',
+            '                                                         - export issues to disk as md',
             '',
             '  issue github limit                                     - display api rate limit',
             '',
@@ -79,7 +80,7 @@
             '  issue github list --repo victorquinn/chancejs',
             '  issue github search --repo victorquinn/chancejs Ooof',
             '  issue github show --repo victorquinn/chancejs 207',
-            '  issue github export --dest issues --answer yes --repo victorquinn/chancejs Ooof',
+            '  issue github export --dest issues --answer yes --repo victorquinn/chancejs',
             '',
             '  issue github limit',
             '  issue github login',
