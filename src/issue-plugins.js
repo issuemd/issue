@@ -2,16 +2,14 @@
 
 ! function () {
 
-    module.exports = function (issueConfig, helper) {
+    module.exports = function (helper) {
 
         var path = require('path'),
             fs = require('fs');
 
-        var _ = require('underscore'),
-            issuemd = require('issuemd');
+        var _ = require('underscore');
 
-        var issueTemplates = require('./issue-templates.js'),
-            config = issueConfig(),
+        var config = helper.config,
             pluginDirs = [
                 path.join(__dirname, '..', 'plugins'),
                 path.join(__dirname, '..', '..')
@@ -20,7 +18,7 @@
             });
 
         var plugins = {
-            init: require('./issue-init.js')(issueConfig)
+            init: require('./issue-init.js')(helper)
         };
 
         _.each(pluginDirs, function (pluginDir) {
@@ -48,7 +46,7 @@
 
                             if (!!config.plugins[value].enabled) {
                                 packageJson = require(pluginDir + projectName + path.sep + 'package.json');
-                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(issueConfig, helper, issuemd, issueTemplates);
+                                plugins[value] = require(pluginDir + projectName + path.sep + packageJson.main)(helper);
                             } else {
                                 plugins[value] = false;
                             }

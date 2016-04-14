@@ -77,6 +77,7 @@
 
         function init(argvIn) {
             argv = argvIn;
+            internalConfig = false;
             return config;
         }
 
@@ -142,6 +143,7 @@
             });
             myConfig = _.defaults(myConfig, {
                 // subtract one form column width on windows to avoid insertion of empty lines
+                // See here for more CLI window size hints: http://stackoverflow.com/a/15854865/665261
                 width: process.stdout.columns - (process.platform === 'win32' ? 1 : 0)
             });
             return myConfig;

@@ -2,7 +2,7 @@
   "name": "issue-plugin-github",
   "version": "0.0.1",
   "description": "Github plugin for issue cli, fetching issues from github api",
-  "main": "main.js",
+  "main": "issue-plugin-github.js",
   "directories": {
     "test": "tests"
   },

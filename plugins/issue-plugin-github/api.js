@@ -2,9 +2,10 @@
 
 module.exports = function () {
 
-    return function (config, helper) {
+    return function (helper) {
 
-        var _ = require('underscore');
+        var _ = require('underscore'),
+            Q = require('q');
 
         var apiDefaults = {
             host: 'api.github.com',
@@ -24,6 +25,8 @@ module.exports = function () {
 
         return {
             nextPage: nextPage,
+            nextPageUrl: nextPageUrl,
+            pages: pages,
             createAuthToken: createAuthToken,
             getAuthTokens: getAuthTokens,
             rateLimit: rateLimit,
@@ -38,11 +41,43 @@ module.exports = function () {
             searchIssues: searchIssues
         };
 
+        function pages(response) {
+
+            var data = [];
+
+            return success(response);
+
+            function success(response) {
+                data = data.concat(response.data);
+                var pages = nextPageUrl(response.headers.link);
+                return pages.next && nextPage(pages.next.url).then(success) || data;
+            }
+
+        }
+
+        function nextPageUrl(link) {
+
+            var urls = {};
+
+            if (link) {
+                // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
+                link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, function (_, url, page, name) {
+                    urls[name] = {
+                        url: url,
+                        page: page * 1
+                    };
+                });
+            }
+
+            return urls;
+
+        }
+
         function nextPage(url) {
             return ajaxWrapper(url);
         }
 
-        function createAuthToken(username, password, scopes, tokenName) {
+        function createAuthToken(username, password, tokenName) {
 
             var url = '/authorizations';
 
@@ -53,17 +88,21 @@ module.exports = function () {
             options.headers.Authorization = 'Basic ' + helper.toBase64(username + ':' + password);
 
             var body = {
-                scopes: scopes,
+                scopes: ['user', 'repo', 'gist'],
                 note: tokenName
             };
 
-            return ajaxWrapper(url, options, body);
+            return ajaxWrapper(url, options, body).then(function (response) {
+                return response.data;
+            });
 
         }
 
         function rateLimit() {
             var url = '/rate_limit';
-            return ajaxWrapper(url);
+            return ajaxWrapper(url).then(function (response) {
+                return response.data.resources;
+            });
         }
 
         function revokeAuthToken(username, password, tokenId) {
@@ -76,7 +115,7 @@ module.exports = function () {
             options.headers = options.headers || {};
             options.headers.Authorization = 'Basic ' + helper.toBase64(username + ':' + password);
 
-            return ajaxWrapper(url, options);
+            return !tokenId ? Q.resolve({}) : ajaxWrapper(url, options);
 
         }
 
@@ -89,7 +128,9 @@ module.exports = function () {
             options.headers = options.headers || {};
             options.headers.Authorization = 'Basic ' + helper.toBase64(username + ':' + password);
 
-            return ajaxWrapper(url, options);
+            return ajaxWrapper(url, options).then(function (response) {
+                return response.data;
+            });
 
         }
 
@@ -140,15 +181,16 @@ module.exports = function () {
 
         function ajaxWrapper(url, opts, body) {
 
-            var options = _.extend({}, apiDefaults, opts);
+            var options = _.extend({}, apiDefaults, opts),
+                deferred = new Q.defer();
 
             // if Basic Auth is not present, check for existing access token
-            if (!/[?&]access_token=/.test(url) && (!options.headers || !options.headers.Authorization) && config.plugins && config.plugins.github && config.plugins.github.authToken) {
-                url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + config.plugins.github.authToken;
+            if (!/[?&]access_token=/.test(url) && (!options.headers || !options.headers.Authorization) && helper.config.plugins && helper.config.plugins.github && helper.config.plugins.github.authToken) {
+                url += (/\?/.test(url) ? '&' : '?') + 'access_token=' + helper.config.plugins.github.authToken;
             }
 
-            if (config['api-per-page'] && !/[?&]per_page=/.test(url)) {
-                url += (/\?/.test(url) ? '&' : '?') + 'per_page=' + config['api-per-page'];
+            if (helper.config['api-per-page'] && !/[?&]per_page=/.test(url)) {
+                url += (/\?/.test(url) ? '&' : '?') + 'per_page=' + helper.config['api-per-page'];
             }
 
             if (options.method === 'GET' && body) {
@@ -157,21 +199,24 @@ module.exports = function () {
                 });
             }
 
-            var promise = helper.ajax(url, options, body);
+            helper.ajax(url, options, body).then(function (response) {
+                    if (response.headers['x-ratelimit-remaining'] * 1 < 50) {
+                        deferred.notify({
+                            stderr: 'Github api calls remaining: ' + response.headers['x-ratelimit-remaining']
+                        });
+                    }
+                    deferred.resolve(response);
+                })
+                .fail(function (error) {
+                    if (error.response.headers['x-ratelimit-remaining'] === '0') {
+                        deferred.notify({
+                            stderr: 'Rate limit exceeded'
+                        });
+                    }
+                    deferred.reject(error);
+                });
 
-            promise.then(function (response) {
-                if (response.headers['x-ratelimit-remaining'] * 1 < 5) {
-                    console.log('Github api calls remaining: ' + response.headers['x-ratelimit-remaining']);
-                }
-            });
-
-            promise.fail(function (error) {
-                if (error.response.headers['x-ratelimit-remaining'] === '0') {
-                    console.log('Rate limit exceeded');
-                }
-            });
-
-            return promise;
+            return deferred.promise;
 
         }
 

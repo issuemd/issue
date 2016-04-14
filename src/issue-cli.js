@@ -2,28 +2,107 @@
 
 ! function () {
 
+    var helper;
+
     module.exports = {
-        run: run
+        init: init
     };
 
-    function run(argv) {
+    function init(argv) {
 
         var fs = require('fs'),
             path = require('path'),
             src = path.join(path.dirname(fs.realpathSync(__filename)), '../src', path.sep),
-            issueConfig = require('./issue-config.js').init(argv),
-            config = issueConfig(),
-            helper = require('./issue-helper.js')(config.technicolor),
-            plugins = require('./issue-plugins.js')(issueConfig, helper),
-            cliParams = issueConfig().params;
+            configGenerator = require('./issue-config.js').init(argv),
+            config = configGenerator();
 
-        bannerHandler(config, helper, fs, src);
+        helper = require('./issue-utils.js');
+
+        helper.chalk = getChalk(config.technicolor);
+
+        helper.src = src;
+        helper.config = config;
+        helper.configGenerator = configGenerator;
+
+        var issuemd = require('issuemd');
+
+        var colorisationFunctions = {
+            bkey: function (val, render) {
+                return render(helper.chalk.red(val));
+            },
+            bsep: function (val, render) {
+                return render(helper.chalk.bold.gray(val));
+            },
+            htext: function (val, render) {
+                return render(config && config.dim ? helper.chalk.bold.bgWhite.red(val) : helper.chalk.bold.bgRed(val));
+            },
+            hsep: function (val, render) {
+                return render(config && config.dim ? helper.chalk.bold.bgWhite.white(val) : helper.chalk.bold.bgRed.red(val));
+            },
+            btext: function (val, render) {
+                return render(helper.chalk.reset(val));
+            }
+        };
+
+        // TODO: tidier way to define custom colours, perhaps introduce config method in issuemd, or plugin?
+        var summaryCache = issuemd.fn.summary;
+        issuemd.fn.summary = function () {
+            var args = [].slice.call(arguments, 0);
+            args[2] = args[2] || colorisationFunctions;
+            return summaryCache.apply(this, args);
+        };
+
+        var stringCache = issuemd.fn.toString;
+        issuemd.fn.toString = function () {
+            var args = [].slice.call(arguments, 0);
+            args[2] = args[2] || colorisationFunctions;
+            return stringCache.apply(this, args);
+        };
+
+        helper.issuemd = issuemd;
+
+        var plugins = require('./issue-plugins.js')(helper);
+        helper.plugins = plugins;
+
+        return {
+            helper: helper,
+            run: run
+        };
+
+        function getChalk(technicolor) {
+
+            var localChalk = require('chalk');
+
+            var mychalk = new localChalk.constructor({
+                enabled: technicolor
+            });
+
+            mychalk.stripColor = localChalk.stripColor;
+
+            return mychalk;
+
+        }
+    }
+
+    function run(argv) {
+
+        var fs = require('fs');
+
+        var helper = init(argv).helper,
+            config = helper.config,
+            plugins = helper.plugins,
+            src = helper.src,
+            configGenerator = helper.configGenerator;
+
+        var cliParams = config.params;
 
         // grab the main command, which should be a plugin name to handle sub-commands
         var command = cliParams[0];
 
+        bannerHandler(config, helper, fs, src);
+
         if (command === 'config') {
-            commandConfig(cliParams, issueConfig, helper, !!config.userhome);
+            commandConfig(cliParams, configGenerator, helper, !!config.userhome);
         } else {
             // if there is no sub-command, show help
             // else if there is a plugin, pass the subCommand to the plugin to handle
@@ -55,16 +134,16 @@
                     helptext = fs.readFileSync(src + 'issue-cli-usage.txt', 'UTF-8');
                 }
 
-                console.log(helptext);
+                return helptext;
 
             } else if (!!plugins[command]) {
                 cliParams.shift();
-                var subCommand = cliParams.shift();
-                return plugins[command](config, subCommand);
+                config.command = cliParams.shift();
+                return plugins[command](config, config.command);
             } else if (plugins[command] === false) {
-                console.log('The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n');
+                return 'The ' + command + ' plugin disabled. You can re-enable it with:\n\n\tissue config plugins.' + command + '.enabled true\n';
             } else {
-                console.log('Don\'t understand that command... sorry :-/');
+                return 'Don\'t understand that command... sorry :-/';
             }
         }
     }
@@ -88,19 +167,19 @@
      *     $ issue config myconfig.key mynewval
      *     $ issue config myconfig.key mynewval --userhome
      */
-    function commandConfig(cliParams, issueConfig, helper, userConfigFlag) {
+    function commandConfig(cliParams, configGenerator, helper, userConfigFlag) {
 
         // switch the number of sub-commands
         switch (cliParams.slice(1).length) {
 
             case 0:
                 // list all config options
-                console.log(userConfigFlag ? '** not yet implemented for userconfig **' : issueConfig.list());
+                console.log(userConfigFlag ? '** not yet implemented for userconfig **' : configGenerator.list());
                 break;
 
             case 1:
                 // list config option specified in first sub-command
-                console.log(userConfigFlag ? '** not yet implemented for userconfig **' : issueConfig(cliParams[1]));
+                console.log(userConfigFlag ? '** not yet implemented for userconfig **' : configGenerator(cliParams[1]));
                 break;
 
             case 2:
@@ -108,11 +187,11 @@
                 // else set key/value as first/second sub-command
                 if (cliParams[1] === 'remove') {
                     helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function () {
-                        issueConfig(cliParams[2], null, userConfigFlag);
+                        configGenerator(cliParams[2], null, userConfigFlag);
                     }, helper.chalk.red('aborted config change'), 'y');
                 } else {
                     helper.promptYesNo('Are you sure you want to write new config to disk? [Yn]', function () {
-                        issueConfig(cliParams[1], cliParams[2], userConfigFlag);
+                        configGenerator(cliParams[1], cliParams[2], userConfigFlag);
                     }, helper.chalk.red('aborted config change'), 'y');
                 }
                 break;
