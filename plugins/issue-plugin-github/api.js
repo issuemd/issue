@@ -201,7 +201,7 @@ module.exports = function () {
 
             helper.ajax(url, options, body).then(function (response) {
                     if (response.headers['x-ratelimit-remaining'] * 1 < 50) {
-                        deferred.notify({
+                        helper.notify({
                             stderr: 'Github api calls remaining: ' + response.headers['x-ratelimit-remaining']
                         });
                     }
@@ -209,7 +209,7 @@ module.exports = function () {
                 })
                 .fail(function (error) {
                     if (error.response.headers['x-ratelimit-remaining'] === '0') {
-                        deferred.notify({
+                        helper.notify({
                             stderr: 'Rate limit exceeded'
                         });
                     }

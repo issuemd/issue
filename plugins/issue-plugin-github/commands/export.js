@@ -20,7 +20,6 @@
             var issueList = [];
 
             api.getIssues(config.githubrepo.namespace, config.githubrepo.id, filters)
-                .progress(deferred.notify)
                 .then(api.pages)
                 .then(function (response) {
 
@@ -45,7 +44,7 @@
                             }, localissue.attr('created')));
                         } catch (e) {
                             if (e.code !== 'ENOENT') {
-                                deferred.notify(e);
+                                helper.notify(e);
                             }
                         }
                         if (!localissue || localdate < remotedate) {
@@ -116,11 +115,11 @@
                         fs.accessSync(mypath);
                         filename = path.join(mypath, issue.attr('project') + '-' + issue.attr('number') + '.issue.md');
                         fs.writeFileSync(filename, issue.md());
-                        deferred.notify({
+                        helper.notify({
                             stderr: 'Writing to disk: ' + path.relative(process.cwd(), filename)
                         });
                     } catch (e) {
-                        deferred.notify({
+                        helper.notify({
                             stderr: e.message
                         });
                     }

@@ -11,8 +11,26 @@
         captureCredentials: captureCredentials,
         toBase64: toBase64,
         querystringFromParams: querystringFromParams,
-        personFromParts: personFromParts
+        personFromParts: personFromParts,
+        notify: notify,
+        output: output
     };
+
+    function notify(message) {
+        output(message);
+    }
+
+    function output(result) {
+        var _ = require('underscore');
+        _.each(['stdout', 'stderr'], function (item) {
+            if (result && _.isArray(result[item])) {
+                result[item] = result[item].join('\n');
+            }
+        });
+        result && result.stdout && console.log(result.stdout);
+        result && result.stderr && process.stderr.write(result.stderr + '\n');
+        return result;
+    }
 
     // useful since deprication of `fs.exists`
     // http://stackoverflow.com/a/32749571/665261
@@ -103,17 +121,18 @@
         defaultAnswer = defaultAnswer || 'n';
 
         promptly.prompt(question, {
-            default: defaultAnswer
+            default: defaultAnswer,
+            output: process.stderr
         }, function (err, value) {
             if (yesno(value)) {
                 if (typeof ifYes === 'string') {
-                    console.log(ifYes);
+                    output({stderr: ifYes});
                 } else if (typeof ifYes === 'function') {
                     ifYes();
                 }
             } else {
                 if (typeof ifNo === 'string') {
-                    console.log('aborted config change');
+                    output({stderr: 'aborted config change'});
                 } else if (typeof ifNo === 'function') {
                     ifNo();
                 }
