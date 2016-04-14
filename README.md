@@ -41,17 +41,17 @@ The `list` command supports standard GitHub filters: `'filter', 'state', 'labels
 
     $ issue github list --state open
     
-### Search repositories
+### Locate repositories
 
-    $ issue github search <search-term>
+    $ issue github locate <search-term>
 
-Search command can be used to search any repositories on GitHub.
+Locate command can be used to find any repositories on GitHub.
 
 Standard GitHub filters are supported: `'in', 'size', 'forks', 'fork', 'created', 'pushed', 'user', 'repo', 'language', 'stars'`
 
-For example, to list all repositories containing `bootstrap` keyword written in assembly.
+For example, to find all repositories containing `bootstrap` keyword written in assembly.
 
-    $ issue github search bootstrap --language assembly
+    $ issue github locate bootstrap --language assembly
 
 ### Limit check
 

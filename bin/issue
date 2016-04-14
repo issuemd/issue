@@ -1,9 +1,3 @@
 #!/usr/bin/env node
 
-'use strict';
-
-var path = require('path');
-var fs = require('fs');
-var src = path.join(path.dirname(fs.realpathSync(__filename)), '../src');
-
-require(src + '/issue-cli.js').run(process.argv);
+require('../src/platform/nodejs/issue-nodejs.js');

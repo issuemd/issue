@@ -1,16 +1,15 @@
-/* globals jasmine */
-
 'use strict';
 
 describe('issue github', function () {
+
+    var _ = require('underscore');
 
     // mock the config function to be passed to github plugin
     var rootpath = '../../../',
         // hijack the issueHelper to inject mocks on ajax function
         pluginHelper = require(rootpath + 'test/plugin-helper'),
-        issuemd = require('issuemd'),
-        issueTemplates = require(rootpath + 'src/issue-templates.js'),
-        github = require('../main.js')(pluginHelper.mockConfig, pluginHelper.issueHelper, issuemd, issueTemplates);
+        issuemd = pluginHelper.issuemd,
+        github = require('../issue-plugin-github.js')(pluginHelper.issueHelper, issuemd);
 
     it('should load as function', function () {
 
@@ -18,67 +17,33 @@ describe('issue github', function () {
 
     });
 
-    // async test uses `done`
-    it('should search for specified term (jquery)', function (done) {
+    _.each(['jquery', 'moment'], function (item) {
 
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
+        it('should search for another specified term (' + item + ')', function (done) {
 
-        // call github plugin function with mocked config and command
-        github({
-            params: ['jquery'],
-            answer: 'no',
-            plugins: {
-                github: {
-                    enabled: true
+            // call github plugin function with mocked config and command
+            github({
+                params: [item],
+                answer: 'no',
+                plugins: {
+                    github: {
+                        enabled: true
+                    }
                 }
-            }
-        }, 'search').then(function () {
+            }, 'locate').then(function (result) {
 
-            // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(30);
+                // should contain item namespace in top result
+                expect(new RegExp('^' + item).test(result.stdout)).toBe(true);
 
-            // should contain jquery/jquery repo in top result
-            expect(!!console.log.calls[0].args[0].match('git@github.com:jquery/jquery.git')).toBe(true);
+                done();
 
-            done();
-
-        });
-
-    });
-
-    it('should search for another specified term (moment)', function (done) {
-
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
-
-        // call github plugin function with mocked config and command
-        github({
-            params: ['moment'],
-            answer: 'no',
-            plugins: {
-                github: {
-                    enabled: true
-                }
-            }
-        }, 'search').then(function () {
-
-            // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(30);
-
-            // should contain moment/moment repo in top result
-            expect(!!console.log.calls[0].args[0].match('git@github.com:moment/moment.git')).toBe(true);
-
-            done();
+            });
 
         });
 
     });
 
     it('should show results summary (chance.js)', function (done) {
-
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
 
         // call github plugin function with mocked config and command
         github({
@@ -90,13 +55,9 @@ describe('issue github', function () {
                     enabled: true
                 }
             }
-        }, 'show').then(function () {
+        }, 'show').then(function (result) {
 
-            // the list of console logs should be 30 long by now - in any order
-            expect(console.log.calls.length).toBe(1);
-
-            // should contain summary table
-            expect(console.log.calls[0].args[0].length).toBe(4047);
+            expect(result.stdout.length).toBe(4288);
 
             done();
 
@@ -105,9 +66,6 @@ describe('issue github', function () {
     });
 
     it('should show paginated results summary (chance.js)', function (done) {
-
-        // create spy on the console.log function used to output search results
-        console.log = jasmine.createSpy('log');
 
         // call github plugin function with mocked config and command
         github({
@@ -119,16 +77,14 @@ describe('issue github', function () {
                     enabled: true
                 }
             }
-        }, 'show').then(function () {
+        }, 'show').then(function (result) {
 
-            // should have two calls to console.log, one for each summary table
-            // the second table should be shorter than a full length summary
+            expect(result.stdout.length).toBe(4288);
 
-            expect(console.log.calls.length).toBe(2);
-            expect(console.log.calls[0].args[0].length).toBe(4047);
-            expect(console.log.calls[1].args[0].length).toBe(1310);
-
-            done();
+            result.next().then(function (result) {
+                expect(result.stdout.length).toBe(605);
+                done();
+            });
 
         });
 

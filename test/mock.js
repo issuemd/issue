@@ -10,7 +10,7 @@ module.exports = function (ajax, mode, fixturePath) {
     nock.enableNetConnect();
     nock.back.fixtures = path.join(path.dirname(fs.realpathSync(__filename)) + '/..', fixturePath || 'test/mocks/');
 
-    // pass in `record` for mode to store api calls
+    // pass in `record` for mode to store api calls, i.e. `npm_config_record=true npm test`
     nock.back.setMode(typeof mode === 'string' ? mode : 'lockdown');
 
     var cacheJax = ajax;
