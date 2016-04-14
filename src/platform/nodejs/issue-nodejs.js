@@ -19,7 +19,7 @@ module.exports = (function () {
             console.log(result);
         } else {
 
-            result.progress(output).then(output).then(function (result) {
+            result && result.progress(output).then(output).then(function (result) {
                 if (result && result.next) {
                     if (!config.answer || config.answer === 'ask') {
                         helper.promptYesNo('Load next page? ' + (defaultAnswer === 'n' ? '[yN]' : '[nY]'), function () {
