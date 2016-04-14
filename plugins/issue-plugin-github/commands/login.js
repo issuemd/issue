@@ -57,7 +57,7 @@
                 }).then(function (loginData) {
                     return writeGithubToken(loginData.token, loginData.id);
                 }).then(function () {
-                    return 'Login Success!';
+                    return helper.info('Login', 'Success!');
                 });
 
         }
