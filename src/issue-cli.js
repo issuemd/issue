@@ -24,6 +24,66 @@
         helper.config = config;
         helper.configGenerator = configGenerator;
 
+        helper.events = {
+            closed: function() { /* evt.actor.login */
+                return 'status: closed';
+            },
+            reopened: function() { /* evt.actor.login */
+                return 'status: reopened';
+            },
+            merged: function() { /* evt.actor.login */
+                return 'status: merged';
+            },
+            locked: function() { /* evt.actor.login */
+                return 'locking: locked';
+            },
+            unlocked: function() { /* evt.actor.login */
+                return 'locking: unlocked';
+            },
+            subscribed: function(user) {
+                'subscribed: ' + user;
+            },
+            mentioned: function(user) {
+                'mentioned: ' + user;
+            },
+            assigned: function(user) {
+                'assigned: ' + user;
+            },
+            unassigned: function(user) {
+                'unassigned: ' + user;
+            },
+            labeled: function(user) {
+                'added label: ' + user;
+            },
+            unlabeled: function(user) {
+                'removed label: ' + user;
+            },
+            milestoned: function(user) {
+                'added milestone: ' + user;
+            },
+            demilestoned: function(user) {
+                'removed milestone: ' + user;
+            },
+            renamed: function(user) {
+                'renamed issue: ' + user;
+            },
+            branchDeleted: function() {
+                return 'branch: deleted';
+            },
+            branchRestored: function() {
+                return 'branch: restored';
+            },
+            referenced: function() {
+                return 'The issue was referenced from a commit message';
+            },
+            pullRequest: function() {
+                return 'pull request opened';
+            },
+            update: function() {
+                return 'update to issue';
+            }
+        }
+
         var issuemd = require('issuemd');
 
         var colorisationFunctions = {

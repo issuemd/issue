@@ -148,66 +148,52 @@
             };
 
             var handlers = {
-                closed: function () {
-                    return 'status: closed';
-                },
-                reopened: function () {
-                    return 'status: reopened'; /* evt.actor.login */
-                },
-                merged: function () {
-                    return 'status: merged'; /* evt.actor.login */
-                },
-                locked: function () {
-                    return 'locking: locked'; /* evt.actor.login */
-                },
-                unlocked: function () {
-                    return 'locking: unlocked'; /* evt.actor.login */
-                },
+                closed: helper.events.closed,
+                reopened: helper.events.reopened,
+                merged: helper.events.merged,
+                locked: helper.events.locked,
+                unlocked: helper.events.unlocked,
                 subscribed: function (evt) {
-                    return 'subscribed: ' + evt.actor.login;
+                    return helper.events.subscribed(evt.actor.login);
                 },
                 mentioned: function (evt) {
-                    return 'mentioned: ' + evt.actor.login;
+                    return helper.events.mentioned(evt.actor.login);
                 },
                 assigned: function (evt) {
-                    return 'assigned: ' + evt.assignee.login;
+                    return helper.events.assigned(evt.assignee.login);
                 },
                 unassigned: function (evt) {
-                    return 'unassigned: ' + evt.assignee.login;
+                    return helper.events.unassigned(evt.assignee.login);
                 },
-                labeled: function (evt) {
-                    return 'added label: ' + evt.label.name; /* evt.label.color */
+                labeled: function (evt) { /* evt.label.color */
+                    return helper.events.labeled(evt.label.name);
                 },
-                unlabeled: function (evt) {
-                    return 'removed label: ' + evt.label.name; /* evt.label.color */
+                unlabeled: function (evt) { /* evt.label.color */
+                    return helper.events.unlabeled(evt.label.name);
                 },
                 milestoned: function (evt) {
-                    return 'added milestone: ' + evt.milestone.title;
+                    return helper.events.milestoned(evt.milestone.title);
                 },
                 demilestoned: function (evt) {
-                    return 'removed milestone: ' + evt.milestone.title;
+                    return helper.events.demilestoned(evt.milestone.title);
                 },
-                renamed: function (evt) {
-                    return 'renamed issue: ' + evt.rename.to; /* evt.rename.from */
+                renamed: function (evt) { /* evt.rename.from */
+                    return helper.events.renamed(evt.rename.to);
                 },
-                head_ref_deleted: function () { // jshint ignore:line
-                    return 'branch: deleted';
-                },
-                head_ref_restored: function () { // jshint ignore:line
-                    return 'branch: restored';
-                },
+                head_ref_deleted: helper.events.branchDeleted, // jshint ignore:line
+                head_ref_restored: helper.events.branchRestored, // jshint ignore:line
                 referenced: function () {
                     update.type = 'reference';
-                    return 'The issue was referenced from a commit message';
+                    return helper.events.referenced;
                 },
                 // synthesised events
                 pull_request: function () { // jshint ignore:line
                     update.type = 'pull-request';
-                    return 'pull request opened';
+                    return helper.events.pullRequest();
                 },
                 update: function () { // jshint ignore:line
                     update.type = 'edit';
-                    return 'update to issue';
+                    return helper.events.update();
                 }
             };
 
