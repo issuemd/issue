@@ -19,7 +19,7 @@ module.exports = (function () {
             console.log(result);
         } else {
 
-            result && result.progress(output).then(output).then(function (result) {
+            result && result.then(helper.output).then(function (result) {
                 if (result && result.next) {
                     if (!config.answer || config.answer === 'ask') {
                         helper.promptYesNo('Load next page? ' + (defaultAnswer === 'n' ? '[yN]' : '[nY]'), function () {
@@ -38,17 +38,6 @@ module.exports = (function () {
 
         }
 
-    }
-
-    function output(result) {
-        _.each(['stdout', 'stderr'], function (item) {
-            if (result && _.isArray(result[item])) {
-                result[item] = result[item].join('\n');
-            }
-        });
-        result && result.stdout && console.log(result.stdout);
-        result && result.stderr && process.stderr.write(result.stderr + '\n');
-        return result;
     }
 
 })();

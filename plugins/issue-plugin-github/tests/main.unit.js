@@ -82,7 +82,7 @@ describe('issue github', function () {
             expect(result.stdout.length).toBe(4288);
 
             result.next().then(function (result) {
-                expect(result.stdout.length).toBe(605);
+                expect(result.stdout.length).toBe(732);
                 done();
             });
 
