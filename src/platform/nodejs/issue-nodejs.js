@@ -1,4 +1,4 @@
-module.exports = (function () {
+module.exports = (async function () {
 
     'use strict';
 
@@ -8,6 +8,12 @@ module.exports = (function () {
         helper = issue.helper,
         config = issue.helper.config,
         defaultAnswer = 'n';
+
+    // TODO: remove this hack
+    if (process.argv[2] === 'gh') {
+        const result = await issue.run(process.argv)
+        return console.log(result)
+    }
 
     return resultHandler(issue.run(process.argv));
 
@@ -19,7 +25,8 @@ module.exports = (function () {
             console.log(result);
         } else {
 
-            result && result.progress(output).then(output).then(function (result) {
+            // result && result.progress(output).then(output).then(function (result) {
+            result && result.then(output).then(function (result) {
                 if (result && result.next) {
                     if (!config.answer || config.answer === 'ask') {
                         helper.promptYesNo('Load next page? ' + (defaultAnswer === 'n' ? '[yN]' : '[nY]'), function () {

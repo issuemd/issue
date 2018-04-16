@@ -1,0 +1,17 @@
+{
+  "name": "issue-plugin-gh",
+  "version": "0.0.1",
+  "description": "github plugin",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Billy Moon <billy@issue.md>",
+  "contributors": [
+    {
+      "name": "Luka Siric",
+      "email": "luka@issue.md"
+    }
+  ],
+  "license": "MIT"
+}
