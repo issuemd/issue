@@ -1,9 +1,11 @@
-const show = async (namespace, reponame, issueid, rest) => {
-    const issue = await rest(`https://api.github.com/repos/${namespace}/${reponame}/issues/${issueid}`)
-    issue.events = await rest(issue.events_url)
-    issue.comments = await rest(issue.comments_url)
-    const pullRequests = issue.pull_request ? await rest(issue.pull_request.url) : null
+const show = async (namespace, reponame, issueid, apiFetchWithAuth) => {
+    const issue = await apiFetchWithAuth(`https://api.github.com/repos/${namespace}/${reponame}/issues/${issueid}`)
+    issue.events = await apiFetchWithAuth(issue.events_url)
+    issue.comments = await apiFetchWithAuth(issue.comments_url)
+    const pullRequests = issue.pull_request ? await apiFetchWithAuth(issue.pull_request.url) : null
     
+    require('fs').writeFileSync('data.json', JSON.stringify({ issue, pullRequests }, null, 2))
+
     if (pullRequests && pullRequests.updated_at) {
         issue.events.push({
             event: 'pull_request',
