@@ -1,11 +1,9 @@
-'use strict';
+/* global expect it describe */
+
+'use strict'
 
 describe('issue init', function () {
-
-    it('should do simple maths', function () {
-
-        expect(1 + 1).toBe(2);
-
-    });
-
-});
+  it('should do simple maths', function () {
+    expect(1 + 1).toBe(2)
+  })
+})
