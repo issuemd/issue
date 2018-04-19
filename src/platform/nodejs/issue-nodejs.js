@@ -11,7 +11,7 @@ module.exports = (async function () {
     // TODO: remove this hack
   if (process.argv[2] === 'gh') {
     const result = await issue.run(process.argv)
-    return console.log(result)
+    return console.log(result.stdout)
   }
 
   return resultHandler(issue.run(process.argv))

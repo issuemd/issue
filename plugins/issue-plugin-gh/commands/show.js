@@ -1,9 +1,4 @@
-const show = async (namespace, reponame, issueid, apiFetchWithAuth) => {
-  const issue = await apiFetchWithAuth(`https://api.github.com/repos/${namespace}/${reponame}/issues/${issueid}`)
-  issue.events = await apiFetchWithAuth(issue.events_url)
-  issue.comments = await apiFetchWithAuth(issue.comments_url)
-  const pullRequests = issue.pull_request ? await apiFetchWithAuth(issue.pull_request.url) : null
-
+const show = (issue, pullRequests) => {
   if (pullRequests && pullRequests.updated_at) {
     issue.events.push({
       event: 'pull_request',
@@ -17,8 +12,8 @@ const show = async (namespace, reponame, issueid, apiFetchWithAuth) => {
       return item.event !== 'referenced' && new Date(item.created_at) > new Date(memo) ? item.created_at : memo
     }, issue.comments.length && issue.comments[issue.comments.length - 1].updated_at)
 
+    // TODO: refactor calculatedUpdateTime
     let calculatedUpdateTime
-
     if (!lastCommentOrEventUpdate && issue.created_at !== issue.updated_at) {
       calculatedUpdateTime = issue.updated_at
     } else if (!!lastCommentOrEventUpdate && new Date(issue.updated_at) > new Date(lastCommentOrEventUpdate)) {
