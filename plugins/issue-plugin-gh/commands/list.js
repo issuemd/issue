@@ -1,8 +1,7 @@
 const _ = require('lodash')
 
-const list = (response, issuemd, personFromParts, dateStringToIso, width) => {
+const list = (response, issuemd, personFromParts, dateStringToIso) => {
   const githubIssues = _.isArray(response) ? response : [response]
-        // pages = api.nextPageUrl(response.headers.link)
 
   const issues = _.reduce(githubIssues, (issues, githubIssue) => {
     return issues.merge(issuemd({
@@ -10,7 +9,7 @@ const list = (response, issuemd, personFromParts, dateStringToIso, width) => {
       creator: personFromParts({
         username: githubIssue.user.login
       }),
-      created: dateStringToIso(githubIssue.created_at), // jshint ignore:line
+      created: dateStringToIso(githubIssue.created_at),
       body: githubIssue.body,
       id: githubIssue.number,
       assignee: githubIssue.assignee ? githubIssue.assignee.login : 'unassigned',
@@ -18,12 +17,7 @@ const list = (response, issuemd, personFromParts, dateStringToIso, width) => {
     }))
   }, issuemd())
 
-  return {
-    stdout: issues.summary(width)
-        // next: pages.next && function () {
-        //   return api.nextPage(pages.next.url).then(showSuccess)
-        // }
-  }
+  return issues
 }
 
 module.exports = list
