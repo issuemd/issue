@@ -4,8 +4,6 @@ const show = async (namespace, reponame, issueid, apiFetchWithAuth) => {
   issue.comments = await apiFetchWithAuth(issue.comments_url)
   const pullRequests = issue.pull_request ? await apiFetchWithAuth(issue.pull_request.url) : null
 
-  require('fs').writeFileSync('data.json', JSON.stringify({ issue, pullRequests }, null, 2))
-
   if (pullRequests && pullRequests.updated_at) {
     issue.events.push({
       event: 'pull_request',
