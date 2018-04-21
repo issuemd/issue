@@ -4,7 +4,7 @@ const url = require('url')
 const http = require('http')
 const https = require('https')
 
-const ajax = (uri, headers, handler) => new Promise((resolve, reject) => {
+const ajax = (uri, headers, handler = i => i) => new Promise((resolve, reject) => {
   const parsedUri = url.parse(uri)
   const protocol = parsedUri.protocol === 'https:' ? https : http
   protocol.get(Object.assign(parsedUri, { headers }), res => {

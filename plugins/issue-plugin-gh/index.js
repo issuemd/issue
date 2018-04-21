@@ -22,14 +22,13 @@ const reform = (uri, token) => {
   return `https://api.github.com${pathname}?${querystring.stringify(parsedQuery)}`
 }
 
-
 module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk }) => async config => {
   const { width, command, params, repo, git, plugins: { github } } = config
 
   const apiFetchOneWithAuth = (uri, progressCallback) => fetchOne(reform(uri, github.authToken), progressCallback)
   const apiFetchAllWithAuth = (uri, progressCallback) => fetchAll(reform(uri, github.authToken), progressCallback)
 
-  const githubrepo = autoDetectRepo(repo, github.autodetect !== false, git && git.remote)
+  const githubrepo = await autoDetectRepo(repo, github.autodetect !== false, git && git.remote)
 
   const limitCommand = async () => {
     const { json } = await apiFetchOneWithAuth('/rate_limit')
