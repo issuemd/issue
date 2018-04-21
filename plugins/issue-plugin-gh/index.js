@@ -8,6 +8,12 @@ const list = require('./commands/list')
 const limit = require('./commands/limit')
 const helptext = require('./helptext')
 
+const reform = (uri, token) => {
+  // const prefixed = /^https?:\/\//.test(uri) ? uri : `https://api.github.com${uri}`
+  // const suffixed = 
+  return `${/^https?:\/\//.test(uri) ? '' : 'https://api.github.com'}${uri}${token ? `?access_token=${token}` : ''}` 
+}
+
 module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk }) => async config => {
   const { width, command, params, repo, git, plugins: { github } } = config
 
@@ -15,6 +21,8 @@ module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk }) => async
   // next: pages.next && function () {
   //   return api.nextPage(pages.next.url).then(showSuccess)
   // }
+  console.log(reform('/rate_limit'))
+  process.exit()
   const apiFetchOneWithAuth = url => fetchOne(url, github.authToken)
   const apiFetchAllWithAuth = url => fetchAll(url, github.authToken)
 
