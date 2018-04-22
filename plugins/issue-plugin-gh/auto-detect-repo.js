@@ -8,7 +8,7 @@ const autoDetectRepo = async (configRepo, configAutoDectect, configGitRemote) =>
     return { namespace, id }
   } else if (configAutoDectect && configGitRemote) {
     // TODO: refactor npm registry lookup
-    if(configRepo && !/\//.test(configRepo)) {
+    if (configRepo && !/\//.test(configRepo)) {
       const { body } = await ajax(`http://registry.npmjs.org/${configRepo}`)
       configGitRemote = JSON.parse(body).repository.url
     }

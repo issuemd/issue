@@ -20,8 +20,6 @@ module.exports = (async function () {
       } else if (!!config.answer && helper.yesno(config.answer)) {
         handler(await result.next())
       }
-    } else {
-      return
     }
   }
 

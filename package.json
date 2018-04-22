@@ -27,9 +27,9 @@
     "issue": "./bin/issue"
   },
   "scripts": {
-    "start": "npm run lint && npm run test:cover",
     "lint": "standard",
-    "test": "jest",
+    "test": "npm run lint && npm run test:cover",
+    "test:unit": "jest",
     "test:cover": "jest --coverage"
   },
   "repository": {

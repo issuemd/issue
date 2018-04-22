@@ -47,7 +47,9 @@ module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk, configGene
       const { json: tokens } = await apiFetchOneWithAuth('/authorizations', basicAuthHeader)
       const token = tokens.filter(auth => auth.note === tokenName)[0]
       const tokenId = token && token.id
-      const revoked = !tokenId ? {} : await apiFetchOneWithAuth(`/authorizations/${tokenId}`, basicAuthHeader, 'DELETE')
+      // TODO: handle error in revoke
+      // const revoked = !tokenId ? {} : await apiFetchOneWithAuth(`/authorizations/${tokenId}`, basicAuthHeader, 'DELETE')
+      await apiFetchOneWithAuth(`/authorizations/${tokenId}`, basicAuthHeader, 'DELETE')
 
       const postData = {
         scopes: ['user', 'repo', 'gist'],
@@ -72,7 +74,6 @@ module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk, configGene
     } else {
       return { stdout: 'Problem logging out!' }
     }
-
   }
 
   const recursiveLocateCommand = uri => async () => {
