@@ -1,7 +1,5 @@
 'use strict'
 
-const _ = require('lodash')
-
 const API = require('./api')
 const autoDetectRepo = require('./auto-detect-repo')
 const loginCommand = require('./commands/login')
@@ -9,6 +7,7 @@ const logoutCommand = require('./commands/logout')
 const limitCommand = require('./commands/limit')
 const showCommand = require('./commands/show')
 const listCommand = require('./commands/list')
+const searchCommand = require('./commands/search')
 const locateCommand = require('./commands/locate')
 const helptext = require('./helptext')
 
@@ -26,6 +25,8 @@ module.exports = helper => async config => {
     return logoutCommand(configGenerator)
   } else if (command === 'limit') {
     return limitCommand(api, chalk)
+  } else if (command === 'search' && params.length) {
+    return searchCommand(api, githubrepo.namespace, githubrepo.id, params[0], issuemd, personFromParts, dateStringToIso, width)
   } else if (command === 'show' && params.length) {
     return showCommand(api, githubrepo.namespace, githubrepo.id, params[0], issuemd, dateStringToIso, personFromParts, width)
   } else if (command === 'list' || command === 'show') {
