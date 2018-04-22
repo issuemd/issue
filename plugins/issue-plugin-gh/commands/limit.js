@@ -10,12 +10,21 @@ const colorLimit = (value, limit, { red, yellow, green }) => {
   return color(value)
 }
 
-const limit = (rateLimits, { white, green, red, yellow }) => _.map(rateLimits, (value, name) => ([
+const limitHandler = (rateLimits, { white, green, red, yellow }) => _.map(rateLimits, (value, name) => ([
   white(`${name} requests: `),
   colorLimit(value.remaining, value.limit, { red, yellow, green }),
   white(`/${value.limit}, resets in: `),
   green(getMinutes(value.reset)),
   white(' mins')
 ].join(''))).join('\n')
+
+const limit = async (api, chalk) => {
+  const { json } = await api.rateLimit()
+  const limits = await limitHandler(json.resources, chalk)
+
+  return {
+    stdout: limits
+  }
+}
 
 module.exports = limit

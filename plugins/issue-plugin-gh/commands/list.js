@@ -1,6 +1,6 @@
 const _ = require('lodash')
 
-const list = (response, issuemd, personFromParts, dateStringToIso) => {
+const listHandler = (response, issuemd, personFromParts, dateStringToIso) => {
   const githubIssues = _.isArray(response) ? response : [response]
 
   const issues = _.reduce(githubIssues, (issues, githubIssue) => {
@@ -18,6 +18,15 @@ const list = (response, issuemd, personFromParts, dateStringToIso) => {
   }, issuemd())
 
   return issues
+}
+
+const list = (api, namespace, repoId, issuemd, personFromParts, dateStringToIso, width) => {
+  // TODO: add filters
+  // TODO: add confirmation dialog
+  return api.list(namespace, repoId, (json, next) => ({
+    stdout: listHandler(json, issuemd, personFromParts, dateStringToIso).summary(width),
+    next
+  }))
 }
 
 module.exports = list

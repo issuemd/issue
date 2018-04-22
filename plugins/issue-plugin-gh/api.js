@@ -25,7 +25,7 @@ module.exports = token => {
 
   const rateLimit = () => fetch('/rate_limit')
 
-  const show = (namespace, id, issueId) => fetch(`/repos/${namespace}/${id}/issues/${issueId}`)
+  const show = (namespace, id, issueId) => fetchAll(`/repos/${namespace}/${id}/issues/${issueId}`)
 
   const authorizations = (username, password) => fetch('/authorizations', basicAuthHeader(username, password))
 
