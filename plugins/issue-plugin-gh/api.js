@@ -2,18 +2,18 @@
 
 const ajax = require('./ajax')
 
-const fetchOne = (uri, progressCallback) => ajax(uri, {
+const fetchOne = (uri, headers = {}, method, postData, progressCallback) => ajax(uri, Object.assign(headers, {
   'User-Agent': 'issuemd/issue',
   Accept: 'application/vnd.github.v3+json',
   'Content-Type': 'application/json;charset=UTF-8'
-}, res => {
+}), res => {
   try {
     res.json = JSON.parse(res.body)
   } catch (err) {}
   progressCallback && progressCallback(res.headers)
   res.nextPageUrl = nextPageUrl(res.headers.link)
   return res
-})
+}, method, postData ? JSON.stringify(postData) : null)
 
 const nextPageUrl = link => {
   const urls = {}
@@ -28,8 +28,8 @@ const nextPageUrl = link => {
   return urls
 }
 
-const fetchAll = async (uri, progressCallback) => {
-  const { headers, json } = await fetchOne(uri, progressCallback)
+const fetchAll = async (uri, extraHeaders, method, postData, progressCallback) => {
+  const { headers, json } = await fetchOne(uri, extraHeaders, method, postData, progressCallback)
   let lastHeaders = headers
   // if there are next links in headers, fetch all and assume json is array and push all responses onto it
   let nextLink = headers.link && nextPageUrl(headers.link).next
@@ -40,7 +40,7 @@ const fetchAll = async (uri, progressCallback) => {
       throw Error('issue is too big, had to fetch more than 50 pages of api calls!')
     }
 
-    const { headers: innerHeaders, json: innerData } = await fetchOne(nextLink.url, progressCallback)
+    const { headers: innerHeaders, json: innerData } = await fetchOne(nextLink.url, extraHeaders, method, postData, progressCallback)
     lastHeaders = innerHeaders
     Array.prototype.push.apply(json, innerData)
     nextLink = innerHeaders.link && nextPageUrl(innerHeaders.link).next

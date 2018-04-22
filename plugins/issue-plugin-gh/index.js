@@ -2,6 +2,7 @@
 
 const url = require('url')
 const querystring = require('querystring')
+const os = require('os')
 
 const { fetchAll, fetchOne } = require('./api')
 const autoDetectRepo = require('./auto-detect-repo')
@@ -9,6 +10,7 @@ const issueFromApiJson = require('./issue-from-api-json')
 const show = require('./commands/show')
 const list = require('./commands/list')
 const limit = require('./commands/limit')
+const auth = require('./commands/auth')
 const locate = require('./commands/locate')
 const helptext = require('./helptext')
 
@@ -19,14 +21,14 @@ const reform = (uri, token) => {
     parsedQuery.access_token = token
   }
   const suffix = Object.keys(parsedQuery).length ? '?' + querystring.stringify(parsedQuery) : ''
-  return `https://api.github.com${pathname}?${querystring.stringify(parsedQuery)}`
+  return `https://api.github.com${pathname}${suffix}`
 }
 
-module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk }) => async config => {
+module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk, configGenerator, captureCredentials, toBase64 }) => async config => {
   const { width, command, params, repo, git, plugins: { github } } = config
 
-  const apiFetchOneWithAuth = (uri, progressCallback) => fetchOne(reform(uri, github.authToken), progressCallback)
-  const apiFetchAllWithAuth = (uri, progressCallback) => fetchAll(reform(uri, github.authToken), progressCallback)
+  const apiFetchOneWithAuth = (uri, headers, method, postData, progressCallback) => fetchOne(reform(uri, github.authToken), headers, method, postData, progressCallback)
+  const apiFetchAllWithAuth = (uri, headers, method, postData, progressCallback) => fetchAll(reform(uri, github.authToken), headers, method, postData, progressCallback)
 
   const githubrepo = await autoDetectRepo(repo, github.autodetect !== false, git && git.remote)
 
@@ -35,6 +37,42 @@ module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk }) => async
     const limits = await limit(json.resources, chalk)
 
     return { stdout: limits }
+  }
+
+  const loginCommand = async () => {
+    const generateTokenName = (username, hostname) => `issuemd/issue-${username}@${hostname}`
+
+    const doLogin = async (username, password, tokenName) => {
+      const basicAuthHeader = { Authorization: 'Basic ' + toBase64(username + ':' + password) }
+      const { json: tokens } = await apiFetchOneWithAuth('/authorizations', basicAuthHeader)
+      const token = tokens.filter(auth => auth.note === tokenName)[0]
+      const tokenId = token && token.id
+      const revoked = !tokenId ? {} : await apiFetchOneWithAuth(`/authorizations/${tokenId}`, basicAuthHeader, 'DELETE')
+
+      const postData = {
+        scopes: ['user', 'repo', 'gist'],
+        note: tokenName
+      }
+
+      const { json: newToken } = await apiFetchOneWithAuth('/authorizations', basicAuthHeader, 'POST', postData)
+      const err = auth(configGenerator, newToken.token, newToken.id)
+      if (!err) {
+        return 'Logged in'
+      } else {
+        return 'Problem logging in!'
+      }
+    }
+
+    // first logout, which ensures userconfig is writable
+    const err = await auth(configGenerator)
+    if (!err) {
+      const { username, password } = await captureCredentials(config.username, config.password)
+      const hostname = os.hostname()
+      return { stdout: await doLogin(username, password, generateTokenName(username, hostname)) }
+    } else {
+      return { stdout: 'Problem logging out!' }
+    }
+
   }
 
   const recursiveLocateCommand = uri => async () => {
@@ -74,7 +112,14 @@ module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk }) => async
     return recursiveListCommand(`/repos/${githubrepo.namespace}/${githubrepo.id}/issues`)()
   }
 
-  if (command === 'limit') {
+  if (command === 'logout') {
+    // TODO: attempt to revoke token remotely
+    const err = await auth(configGenerator)
+    const stdout = err ? 'Error logging out' : 'Logged out from issue github'
+    return { stdout }
+  } else if (command === 'login') {
+    return loginCommand()
+  } else if (command === 'limit') {
     return limitCommand()
   } else if (command === 'show' && params.length) {
     return showCommand(params[0])
