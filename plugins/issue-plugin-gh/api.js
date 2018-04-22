@@ -1,10 +1,16 @@
 'use strict'
 
+const _ = require('lodash')
 const { fetchOneFactory, fetchAllFactory, basicAuthHeader } = require('./api-helpers')
 
-module.exports = token => {
+module.exports = (token, config) => {
   const fetch = fetchOneFactory(token)
   const fetchAll = fetchAllFactory(token)
+
+  const queryStringify = (...args) => {
+    const qs = Object.entries(Object.assign({}, ...args)).map(([key, value]) => `${key}=${value}`).join('&')
+    return qs ? `?${qs}` : ''
+  }
 
   const RecursiveFactory = (initialUri, callback) => {
     const inception = async uri => {
@@ -15,9 +21,11 @@ module.exports = token => {
     return inception(initialUri)
   }
 
-  const locate = (q, callback) => RecursiveFactory(`/search/repositories?q=${q}`, callback)
+  const listFilters = ['milestone', 'state', 'assignee', 'creator', 'mentioned', 'labels', 'sort', 'direction', 'since']
 
-  const list = (namespace, id, callback) => RecursiveFactory(`/repos/${namespace}/${id}/issues`, callback)
+  const locate = (q, callback) => RecursiveFactory(`/search/repositories${queryStringify({ q })}`, callback)
+
+  const list = (namespace, id, callback) => RecursiveFactory(`/repos/${namespace}/${id}/issues${queryStringify(_.pick(config, listFilters))}`, callback)
 
   const rateLimit = () => fetch('/rate_limit')
 
@@ -33,14 +41,14 @@ module.exports = token => {
   })
 
   return {
-    rateLimit,
+    fetch,
+    fetchAll,
     locate,
     list,
+    rateLimit,
     show,
     authorizations,
     revokeAuthorization,
-    createAuthorizationToken,
-    fetch,
-    fetchAll
+    createAuthorizationToken
   }
 }

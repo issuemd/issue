@@ -1,5 +1,7 @@
 'use strict'
 
+const _ = require('lodash')
+
 const API = require('./api')
 const autoDetectRepo = require('./auto-detect-repo')
 const loginCommand = require('./commands/login')
@@ -14,7 +16,7 @@ module.exports = helper => async config => {
   const { issuemd, dateStringToIso, personFromParts, chalk, configGenerator, captureCredentials } = helper
   const { width, command, params, repo, git, plugins: { github }, username: configUsername, password: configPassword } = config
 
-  const api = API(github.authToken)
+  const api = API(github.authToken, config)
 
   const githubrepo = await autoDetectRepo(repo, github.autodetect !== false, git && git.remote)
 

@@ -45,8 +45,8 @@ const fetchOneFactory = token => (uri, headers = {}, method = 'GET', postData, p
   return res
 }, method, postData ? JSON.stringify(postData) : null)
 
-const fetchAllFactory = token => {
-  const fetchOne = fetchOneFactory(token)
+const fetchAllFactory = (...args) => {
+  const fetchOne = fetchOneFactory(...args)
   return async (...args) => {
     const { headers, json } = await fetchOne(...args)
     let lastHeaders = headers
