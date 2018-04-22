@@ -5,6 +5,10 @@ const querystring = require('querystring')
 
 const ajax = require('./ajax')
 
+const toBase64 = input => Buffer.from(input).toString('base64')
+
+const basicAuthHeader = (username, password) => ({ Authorization: 'Basic ' + toBase64(username + ':' + password) })
+
 const reform = (uri, token) => {
   const { pathname, query } = url.parse(uri)
   const parsedQuery = querystring.parse(query)
@@ -67,5 +71,6 @@ const fetchAllFactory = token => {
 
 module.exports = {
   fetchOneFactory,
-  fetchAllFactory
+  fetchAllFactory,
+  basicAuthHeader
 }

@@ -1,10 +1,6 @@
 'use strict'
 
-const { fetchOneFactory, fetchAllFactory } = require('./api-helpers')
-
-const toBase64 = input => Buffer.from(input).toString('base64')
-
-const basicAuthHeader = (username, password) => ({ Authorization: 'Basic ' + toBase64(username + ':' + password) })
+const { fetchOneFactory, fetchAllFactory, basicAuthHeader } = require('./api-helpers')
 
 module.exports = token => {
   const fetch = fetchOneFactory(token)
