@@ -1,55 +1,50 @@
 'use strict'
 
-const ajax = require('./ajax')
+const { fetchOneFactory, fetchAllFactory } = require('./api-helpers')
 
-const fetchOne = (uri, headers = {}, method = 'GET', postData, progressCallback) => ajax(uri, Object.assign(headers, {
-  'User-Agent': 'issuemd/issue',
-  Accept: 'application/vnd.github.v3+json',
-  'Content-Type': 'application/json;charset=UTF-8'
-}), res => {
-  try {
-    res.json = JSON.parse(res.body)
-  } catch (err) {}
-  progressCallback && progressCallback(res.headers)
-  res.nextPageUrl = nextPageUrl(res.headers.link)
-  return res
-}, method, postData ? JSON.stringify(postData) : null)
+const toBase64 = input => Buffer.from(input).toString('base64')
 
-const nextPageUrl = link => {
-  const urls = {}
+const basicAuthHeader = (username, password) => ({ Authorization: 'Basic ' + toBase64(username + ':' + password) })
 
-  if (link) {
-    // http://regexper.com/#/<(.*?(\d+))>;\s*rel="(.*?)"/g
-    link.replace(/<(.*?(\d+))>;\s*rel="(.*?)"/g, (_, url, page, name) => {
-      urls[name] = { url: url, page: page * 1 }
-    })
-  }
+module.exports = token => {
+  const fetch = fetchOneFactory(token)
+  const fetchAll = fetchAllFactory(token)
 
-  return urls
-}
-
-const fetchAll = async (...args) => {
-  const { headers, json } = await fetchOne(...args)
-  let lastHeaders = headers
-  // if there are next links in headers, fetch all and assume json is array and push all responses onto it
-  let nextLink = headers.link && nextPageUrl(headers.link).next
-  let safetyNet = 50
-  while (nextLink) {
-    // just in case we get into an unknown case of endless cycle, don't recurse more than 50 pages
-    if (safetyNet-- === 0) {
-      throw Error('issue is too big, had to fetch more than 50 pages of api calls!')
+  const RecursiveFactory = (initialUri, callback) => {
+    const inception = async uri => {
+      const { json, nextPageUrl } = await fetch(uri)
+      const next = nextPageUrl.next && (() => inception(nextPageUrl.next.url))
+      return callback(json, next)
     }
-
-    const { headers: innerHeaders, json: innerData } = await fetchOne(...args)
-    lastHeaders = innerHeaders
-    Array.prototype.push.apply(json, innerData)
-    nextLink = innerHeaders.link && nextPageUrl(innerHeaders.link).next
+    return inception(initialUri)
   }
 
-  return { json, headers: lastHeaders }
-}
+  const locate = (q, callback) => RecursiveFactory(`/search/repositories?q=${q}`, callback)
 
-module.exports = {
-  fetchAll,
-  fetchOne
+  const list = (namespace, id, callback) => RecursiveFactory(`/repos/${namespace}/${id}/issues`, callback)
+
+  const rateLimit = () => fetch('/rate_limit')
+
+  const show = (namespace, id, issueId) => fetch(`/repos/${namespace}/${id}/issues/${issueId}`)
+
+  const authorizations = (username, password) => fetch('/authorizations', basicAuthHeader(username, password))
+
+  const revokeAuthorization = (username, password, tokenId) => fetch(`/authorizations/${tokenId}`, basicAuthHeader(username, password), 'DELETE')
+
+  const createAuthorizationToken = (username, password, tokenName) => fetch('/authorizations', basicAuthHeader(username, password), 'POST', {
+    scopes: ['user', 'repo', 'gist'],
+    note: tokenName
+  })
+
+  return {
+    rateLimit,
+    locate,
+    list,
+    show,
+    authorizations,
+    revokeAuthorization,
+    createAuthorizationToken,
+    fetch,
+    fetchAll
+  }
 }

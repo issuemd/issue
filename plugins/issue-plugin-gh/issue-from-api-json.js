@@ -1,7 +1,7 @@
 const _ = require('lodash')
 
 const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts) => {
-    // create issuemd instance
+  // create issuemd instance
   const issue = issuemd({
     title: githubIssue.title,
     creator: personFromParts({ username: githubIssue.user.login }),
@@ -11,7 +11,7 @@ const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts
 
   const attr = {}
 
-    // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
+  // http://regexper.com/#/([^/]+?)(?:\/issues\/.+)$/
   const repoName = githubIssue.url.match(/([^/]+?)(?:\/issues\/.+)$/)[1]
   if (repoName) {
     attr.project = repoName
@@ -26,11 +26,11 @@ const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts
     pull_request_url: () => githubIssue.pull_request && githubIssue.pull_request.url,
     milestone: () => githubIssue.milestone && githubIssue.milestone.title,
     closed: () => githubIssue.closed && dateStringToIso(githubIssue.closed_at),
-        // labels get concatenated to comma delimited string
+    // labels get concatenated to comma delimited string
     labels: () => _.pluck(githubIssue.labels, 'name').join(', ')
   }
 
-    // add attributes
+  // add attributes
   issue.attr(_.reduce(attributes, function (memo, next, key) {
     const value = next()
     if (value) {
@@ -39,7 +39,7 @@ const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts
     return memo
   }, attr))
 
-    // handle comments
+  // handle comments
   _.each(githubIssue.comments, function (comment) {
     issue.update({
       body: comment.body,
@@ -49,7 +49,7 @@ const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts
     })
   })
 
-    // handle events
+  // handle events
   _.each(githubIssue.events, function (evt) {
     const issueNo = githubIssue.number
     const update = {
@@ -80,7 +80,7 @@ const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts
         update.type = 'reference'
         return 'The issue was referenced from a commit message'
       },
-            // synthesised events
+      // synthesised events
       pull_request: () => {
         update.type = 'pull-request'
         return 'pull request opened'
@@ -98,7 +98,7 @@ const issueFromApiJson = (githubIssue, issuemd, dateStringToIso, personFromParts
     issue.filter('number', issueNo + '').update(update)
   })
 
-    // sort comments and events
+  // sort comments and events
   issue.sortUpdates()
 
   return issue

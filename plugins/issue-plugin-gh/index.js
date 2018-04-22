@@ -1,10 +1,8 @@
 'use strict'
 
-const url = require('url')
-const querystring = require('querystring')
 const os = require('os')
 
-const { fetchAll, fetchOne } = require('./api')
+const API = require('./api')
 const autoDetectRepo = require('./auto-detect-repo')
 const issueFromApiJson = require('./issue-from-api-json')
 const show = require('./commands/show')
@@ -14,110 +12,100 @@ const auth = require('./commands/auth')
 const locate = require('./commands/locate')
 const helptext = require('./helptext')
 
-const reform = (uri, token) => {
-  const { pathname, query } = url.parse(uri)
-  const parsedQuery = querystring.parse(query)
-  if (token) {
-    parsedQuery.access_token = token
-  }
-  const suffix = Object.keys(parsedQuery).length ? '?' + querystring.stringify(parsedQuery) : ''
-  return `https://api.github.com${pathname}${suffix}`
-}
+module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk, configGenerator, captureCredentials }) => async config => {
+  const { width, command, params, repo, git, plugins: { github }, username: configUsername, password: configPassword } = config
 
-module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk, configGenerator, captureCredentials, toBase64 }) => async config => {
-  const { width, command, params, repo, git, plugins: { github } } = config
-
-  const apiFetchOneWithAuth = (uri, headers, method, postData, progressCallback) => fetchOne(reform(uri, github.authToken), headers, method, postData, progressCallback)
-  const apiFetchAllWithAuth = (uri, headers, method, postData, progressCallback) => fetchAll(reform(uri, github.authToken), headers, method, postData, progressCallback)
+  const api = API(github.authToken)
 
   const githubrepo = await autoDetectRepo(repo, github.autodetect !== false, git && git.remote)
 
   const limitCommand = async () => {
-    const { json } = await apiFetchOneWithAuth('/rate_limit')
+    const { json } = await api.rateLimit()
     const limits = await limit(json.resources, chalk)
 
-    return { stdout: limits }
+    return {
+      stdout: limits
+    }
   }
 
   const loginCommand = async () => {
-    const generateTokenName = (username, hostname) => `issuemd/issue-${username}@${hostname}`
-
-    const doLogin = async (username, password, tokenName) => {
-      const basicAuthHeader = { Authorization: 'Basic ' + toBase64(username + ':' + password) }
-      const { json: tokens } = await apiFetchOneWithAuth('/authorizations', basicAuthHeader)
-      const token = tokens.filter(auth => auth.note === tokenName)[0]
-      const tokenId = token && token.id
-      // TODO: handle error in revoke
-      // const revoked = !tokenId ? {} : await apiFetchOneWithAuth(`/authorizations/${tokenId}`, basicAuthHeader, 'DELETE')
-      await apiFetchOneWithAuth(`/authorizations/${tokenId}`, basicAuthHeader, 'DELETE')
-
-      const postData = {
-        scopes: ['user', 'repo', 'gist'],
-        note: tokenName
-      }
-
-      const { json: newToken } = await apiFetchOneWithAuth('/authorizations', basicAuthHeader, 'POST', postData)
-      const err = auth(configGenerator, newToken.token, newToken.id)
-      if (!err) {
-        return 'Logged in'
-      } else {
-        return 'Problem logging in!'
-      }
-    }
-
     // first logout, which ensures userconfig is writable
+    // TODO: better error handling, i.e. throw
     const err = await auth(configGenerator)
     if (!err) {
-      const { username, password } = await captureCredentials(config.username, config.password)
+      const { username, password } = await captureCredentials(configUsername, configPassword)
       const hostname = os.hostname()
-      return { stdout: await doLogin(username, password, generateTokenName(username, hostname)) }
-    } else {
-      return { stdout: 'Problem logging out!' }
-    }
-  }
+      const tokenName = `issuemd/issue-${username}@${hostname}`
 
-  const recursiveLocateCommand = uri => async () => {
-    const { json, nextPageUrl } = await apiFetchOneWithAuth(uri)
-    const next = nextPageUrl.next && recursiveLocateCommand(nextPageUrl.next.url)
-    return {
-      stdout: locate(json, chalk),
-      next
+      const { json: tokens } = await api.authorizations(username, password)
+      const token = tokens.filter(auth => auth.note === tokenName)[0]
+      const tokenId = token && token.id
+
+      // TODO: handle error in revoke
+      // const revoked = !tokenId ? {} : await api.revokeAuthorization(username, password, tokenId)
+      await api.revokeAuthorization(username, password, tokenId)
+
+      const { json: newToken } = await api.createAuthorizationToken(username, password, tokenName)
+
+      const err = auth(configGenerator, newToken.token, newToken.id)
+      if (!err) {
+        return {
+          stdout: 'Logged in'
+        }
+      } else {
+        return {
+          stdout: 'Problem logging in!'
+        }
+      }
+    } else {
+      return {
+        stdout: 'Problem logging out!'
+      }
     }
   }
 
   const locateCommand = q => {
-    return recursiveLocateCommand(`/search/repositories?q=${q}`)()
+    return api.locate(q, (json, next) => ({
+      stdout: locate(json, chalk),
+      next
+    }))
   }
 
   const showCommand = async issueId => {
-    const { json: issue } = await apiFetchAllWithAuth(`/repos/${githubrepo.namespace}/${githubrepo.id}/issues/${issueId}`)
-    issue.events = (await apiFetchAllWithAuth(issue.events_url)).json
-    issue.comments = (await apiFetchAllWithAuth(issue.comments_url)).json
-    const pullRequests = issue.pull_request ? (await apiFetchAllWithAuth(issue.pull_request.url)).json : null
+    const { json: issue } = await api.show(githubrepo.namespace, githubrepo.id, issueId)
 
-    return { stdout: issueFromApiJson(show(issue, pullRequests), issuemd, dateStringToIso, personFromParts).toString(width) }
-  }
+    const { json: events } = await api.fetchAll(issue.events_url)
+    issue.events = events
 
-  const recursiveListCommand = uri => async () => {
-    const { json, nextPageUrl } = await apiFetchOneWithAuth(uri)
-    const next = nextPageUrl.next && recursiveListCommand(nextPageUrl.next.url)
+    const { json: comments } = await api.fetchAll(issue.comments_url)
+    issue.comments = comments
+
+    let pullRequests
+    if (issue.pull_request) {
+      const { json } = await api.fetchAll(issue.pull_request.url)
+      pullRequests = json
+    }
+
     return {
-      stdout: list(json, issuemd, personFromParts, dateStringToIso).summary(width),
-      next
+      stdout: issueFromApiJson(show(issue, pullRequests), issuemd, dateStringToIso, personFromParts).toString(width)
     }
   }
 
   const listCommand = () => {
     // TODO: add filters
     // TODO: add confirmation dialog
-    return recursiveListCommand(`/repos/${githubrepo.namespace}/${githubrepo.id}/issues`)()
+    return api.list(githubrepo.namespace, githubrepo.id, (json, next) => ({
+      stdout: list(json, issuemd, personFromParts, dateStringToIso).summary(width),
+      next
+    }))
   }
 
   if (command === 'logout') {
     // TODO: attempt to revoke token remotely
     const err = await auth(configGenerator)
-    const stdout = err ? 'Error logging out' : 'Logged out from issue github'
-    return { stdout }
+    return {
+      stdout: err ? 'Error logging out' : 'Logged out from issue github'
+    }
   } else if (command === 'login') {
     return loginCommand()
   } else if (command === 'limit') {
@@ -129,6 +117,8 @@ module.exports = ({ issuemd, dateStringToIso, personFromParts, chalk, configGene
   } else if (command === 'locate' && params.length) {
     return locateCommand(params[0])
   } else {
-    return { stdout: helptext }
+    return {
+      stdout: helptext
+    }
   }
 }
